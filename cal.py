@@ -270,19 +270,17 @@ class CalibrationPoint(cmd.Cmd):
             return
 
         while True:
-            sys.stdout.write("\x1b[A")  # move cursor up one line
-            blankline = ' ' * len(prompt)
-            print(blankline, end='\r')
+            # sys.stdout.write("\x1b[A")  # move cursor up one line
+            # blankline = ' ' * len(prompt)
+            # print(blankline, end='\r')
 
             print('   ({} {}): '.format(self.units, self.value), end='')
-            #sensor.calibration.stats[self.name] = rs.RunningStats()
             self.stats.clear()
             
             sample_time = time.time()
             update_time = sample_time
             for i in range(self.number_of_samples):
                 sensor.update()
-                #sensor.calibration.stats[self.name].push(sensor.raw_value)
                 self.stats.push(sensor.raw_value)
             
                 now = time.time()
