@@ -108,7 +108,8 @@ class SensorShell(cmd.Cmd):
         self.bus = i2c_bus
 
         self.sensor_type = 'none'
-        self.id = sensor_id
+        self.id = sensor_id.strip()
+        
         self.phorp_address = 0x68
         self.phorp_channel = 2
 
@@ -232,7 +233,7 @@ class Sensors(cmd.Cmd):
         self.bus = i2c_bus
         self.procedure = procedure
 
-        self.sensors = []
+        self.sensors = dict()
         self.sensor_index = 0
 
         # known sensor types
@@ -248,25 +249,39 @@ class Sensors(cmd.Cmd):
             sensor_id = 'empty'
         else:
             sensor_id = self.ansi.red(self.sensor.id)
-            if sensor.is_calibrated:
+            if self.sensor.is_calibrated:
                 sensor_id = self.ansi.green(self.sensor.id)
 
         return '{}[{}]: '.format('db', sensor_id)
 
     @property
     def sensor(self):
-        return self.sensors[self.sensor_index]
+        key = list(self.sensors)[self.sensor_index]
+        
+        return self.sensors[key]
 
     def emptyline(self):
         return True
+
+    def to_key(self, id):
+        id = id.strip().lower().replace(' ', '_')
+        
+        return id
     
     def do_new(self, sensor_id):
         ''' new <id>. Create a new sensor instance'''
-        if len(sensor_id.strip()) == 0:
+        sensor_id = sensor_id.strip()
+        
+        if len(sensor_id) == 0:
             print(' missing sensor id.')
             return
-        
-        sensor_type = input(' Enter sensor type [{}] :'.format(self.types))
+
+        sensor_key = self.to_key(sensor_id)
+        if sensor_key in self.sensors.keys():
+            print(' sensor already exists.')
+            return
+               
+        sensor_type = input(' Enter sensor type [{}] :'.format(self.types)).strip()
         
         if sensor_type.lower() not in self.types:
             print(' known types are {}. sensor not created.'.format(self.types))
@@ -279,15 +294,36 @@ class Sensors(cmd.Cmd):
             sensor = EhSensorShell(self.bus, sensor_id)
         elif sensor_type == 'therm':
             sensor = None
-                                   
+
         self.procedure.prep(sensor)
-        self.sensors.append(sensor)
+               
+        self.sensors[sensor_key] = sensor
         self.sensor_index = len(self.sensors) - 1
 
         sensor.do_show()
         
         return
 
+    def do_del(self, arg=None):
+
+        if arg:
+            sensor_key = self.to_key(arg)
+        else:
+            sensor_key = self.to_key(self.sensor.id)
+
+        if sensor_key not in self.sensors.keys:
+            print( ' sensor not found.')
+            return
+        
+        yn = input(' delete sensor {} (y/n)? '.format(self.sensor.id)).strip().lower()
+        if yn == 'y':
+            del self.sensors[sensor_key]
+            print( ' sensor deleted.')
+        else:
+            print( ' delete canceled.')
+
+        return
+            
     def do_edit(self, arg):
         ''' edit selected sensor'''
         self.sensor.cmdloop()
@@ -302,7 +338,7 @@ class Sensors(cmd.Cmd):
             return
         
         i = 0
-        for sensor in self.sensors:
+        for sensor in self.sensors.values():
             carret = ' '
             if i == self.sensor_index:
                 carret = '*'
@@ -322,17 +358,13 @@ class Sensors(cmd.Cmd):
         if self.sensor_index < 0:
             self.sensor_index = 0
 
-        #self.do_list('')
-        
         return
     
     def do_next(self, arg):
         ''' advance to next sensor in list'''
         self.sensor_index += 1
-        if self.sensor_index > len(self.sensors):
-            self.sensor_index = len(self.sensors)
-
-        #self.do_list('')
+        if self.sensor_index > len(self.sensors)-1:
+            self.sensor_index = len(self.sensors)-1
 
         return
     
@@ -363,7 +395,7 @@ class Sensors(cmd.Cmd):
         # Sensors
         serialized = '[{}]\n'.format(prefix)
 
-        for sensor in self.sensors:
+        for sensor in self.sensors.values():
             serialized += '{}\n'.format(sensor.serialize(prefix))
             
         return serialized
