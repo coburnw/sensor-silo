@@ -178,21 +178,20 @@ class SensorShell(cmd.Cmd):
 
     def serialize(self, prefix):
         serialized = ''
-        serialized += 'id = {}\n'.format(self.id)
-        serialized += 'type = {}\n'.format(self.sensor_type)
-        serialized += 'chan_addr = {}.{}\n'.format(self.phorp_address, self.phorp_channel)
+        serialized += 'id = "{}"\n'.format(self.id)
+        serialized += 'type = "{}"\n'.format(self.sensor_type)
+        serialized += 'chan_addr = "{}.{}"\n'.format(self.phorp_address, self.phorp_channel)
         serialized += '\n'
         
         if self.is_calibrated:
+            my_prefix = '{}.{}'.format(prefix, 'coefficients')
+            serialized += self.coefficients.serialize(my_prefix)
+
             my_prefix = '{}.{}'.format(prefix, 'setpoints')
-            #serialized += '[{}]\n'.format(my_prefix)
             for setpoint in self.setpoints:
                 setpoint_prefix = '{}.{}'.format(my_prefix, setpoint.name)
                 serialized += setpoint.serialize(setpoint_prefix)
                 serialized += '\n'
-
-            my_prefix = '{}.{}'.format(prefix, 'coefficients')
-            serialized += self.coefficients.serialize(my_prefix)
 
         return serialized
 
@@ -431,9 +430,9 @@ class CalibrationPoint(cmd.Cmd):
         self.units = units
         self.value = value
 
-        self.sample_period = 1.0
-        self.update_period = 2
-        self.number_of_samples = 10
+        self.sample_period = 0.2
+        self.update_period = 1
+        self.number_of_samples = 30
         
         self.stats = rs.RunningStats()
         
@@ -533,8 +532,8 @@ class CalibrationPoint(cmd.Cmd):
         # CalibrationPoint
         serialized = '[{}]\n'.format(prefix)
         
-        serialized += 'name = {}\n'.format(self.name)
-        serialized += 'units = {}\n'.format(self.units)
+        serialized += 'name = "{}"\n'.format(self.name)
+        serialized += 'units = "{}"\n'.format(self.units)
         serialized += 'value = {}\n'.format(self.value)
 
         if self.n > 0:
