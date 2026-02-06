@@ -1,17 +1,41 @@
 from . import shell
 from . import coefficients
-from . import phorp
 from . import setpoint as sp
 
-from . import frame_streams as fs
+# from . import phorp
+# from . import frame_streams as fs
 
+class Stream():    
+    def __init__(self, type):
+        self.type = type
+
+        return
+    
+    def connect(self, address):
+        ''' initialize an input'''
+        raise NotImplemented
+    
+    def update(self):
+        ''' complete a conversion'''
+        raise NotImplemented
+    
+    @property
+    def raw_value(self):
+        ''' returns a float'''
+        raise NotImplemented
+
+    @property
+    def raw_units(self):
+        ''' returns a string'''
+        raise NotImplemented
+    
+    
 class Sensor():
-    def __init__(self, i2c_bus, sensor_type, sensor_id):
-        self.bus = i2c_bus
+    def __init__(self, sensor_type, sensor_id):
         self.type = sensor_type
         self.id = sensor_id.strip()
 
-        self.stream = None
+        self.stream = None  # configured by procedure
         
         # deployed sensor values
         self.name = ''
@@ -22,45 +46,22 @@ class Sensor():
 
         return
 
-    def connect(self, address=None):
+    def connect(self, stream, address=None):
+        self.stream = stream
+        
         if address is None:
             address = self.address
 
-        board_index, channel_index = self.split_address(address)
+        self.stream.connect(address)
         
-        a = phorp.PhorpX4(self.bus, board_index)
-        self.stream = fs.PhStream(a[int(channel_index)], 'ph_cal', filter_constant=1)
-
         return
     
-    def split_address(self, address):
-        board_index = address[0].lower()
-        channel_index = address[1]
-        
-        return (board_index, channel_index)
-    
-    @property
-    def board_index(self):
-        board, channel = self.split_address(self.address)
-
-        return board
-
-    @property
-    def channel_index(self):
-        board, channel = self.split_address(self.address)
-        
-        return int(channel)
-
     @property
     def raw_value(self):
         return self.stream.raw_value
 
     @property
     def scaled_value(self):
-        return self.stream.value
-
-    @property
-    def value(self):
         return self.evaluate(self.raw_value)
 
     def evaluate(self, raw_value):
@@ -75,10 +76,10 @@ class SensorShell(shell.Shell):
     intro = 'Sensor Configuration.  Blank line to return to previous menu.'
     # prompt = 'sensor: '
 
-    def __init__(self, i2c_bus, sensor_type, sensor_id, *kwargs):
+    def __init__(self, sensor_type, sensor_id, *kwargs):
         super().__init__(*kwargs)
-        self.bus = i2c_bus
-        self.sensor = Sensor(i2c_bus, sensor_type, sensor_id)
+
+        self.sensor = Sensor(sensor_type, sensor_id)
         
         self.setpoints = None  # a dict() configured by Procedure.prep()
         
@@ -119,7 +120,9 @@ class SensorShell(shell.Shell):
         print('  Type: {}'.format(self.sensor.type))
         print('  Name: {}'.format(self.sensor.name))
         print('  Location: {}'.format(self.sensor.location))
-        print('  Address:  {}'.format(self.sensor.address))
+
+        print('  Stream Type:  {}'.format(self.sensor.stream.type))
+        print('  Stream Address:  {}'.format(self.sensor.address))
         print('  calibration due: {}'.format(self.sensor.coefficients.due_date))
         
         return False
@@ -253,17 +256,14 @@ class SensorShell(shell.Shell):
 class Sensors(shell.Shell):
     intro = 'Sensor Database, blank line to return to previous menu...'
 
-    def __init__(self, i2c_bus, procedures, *kwargs):
+    def __init__(self, procedures, *kwargs):
         super().__init__(*kwargs)
         
-        self.bus = i2c_bus
+        #self.streams = streams
         self.procedures = procedures
         
         self.sensors = dict()
         self.sensor_index = 0
-
-        # known sensor types
-        # self.types = ['eh', 'ph'] # 'therm'
 
         return
 
@@ -346,7 +346,9 @@ class Sensors(shell.Shell):
     def new_sensor(self, sensor_type, sensor_id):
         print(' creating new {} sensor {}'.format(sensor_type, sensor_id))
 
-        sensor = SensorShell(self.bus, sensor_type, sensor_id)
+        stream_type = self.procedures[sensor_type].stream_type
+        sensor = SensorShell(sensor_type, sensor_id)
+        
         self.sensors[sensor_id] = sensor
         self.sensor_index = self.last_index
 

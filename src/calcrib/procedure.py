@@ -8,14 +8,17 @@ class Procedure(shell.Shell):
     intro = 'Generic Procedure Configuration'
     prompt = 'edit(?): '
 
-    def __init__(self, *kwargs):
+    def __init__(self, streams, *kwargs):
         super().__init__(*kwargs)
 
+        self.streams = streams
+        self.stream_type = ''
+        
         self.units = ''
         self.point_count = 2
         self.setpoints = dict()
 
-        self.phorp_address = 'a2'
+        self.stream_address = 'a2'
         self.interval = datetime.timedelta(days=180)
 
         self.prompt = '{}'.format(self.cyan(self.prompt))
@@ -54,7 +57,9 @@ class Procedure(shell.Shell):
             print('   P3:   {} {}'.format(self.p3.value, self.p2.units))
 
         print('  Interval: {} days'.format(self.interval.days))
-        print('  Address:  {}'.format(self.phorp_address))
+        print()
+        print('  Stream Type :  {}'.format(self.stream_type))
+        print('  Stream Address:  {}'.format(self.stream_address))
         
         return False
     
@@ -65,7 +70,7 @@ class Procedure(shell.Shell):
         channel = arg[1]
         
         if address in 'abcdefg' and channel in '1234':
-            self.phorp_address = address + channel
+            self.stream_address = address + channel
         else:
             print(' invalid address. board_id is a-g, channel_id is 1-4')
 
@@ -151,7 +156,7 @@ class Procedure(shell.Shell):
         sensor.sensor.units = self.units
         sensor.sensor.coefficients.interval = self.interval
         
-        sensor.sensor.connect(self.phorp_address)
+        sensor.sensor.connect(self.streams[self.stream_type], self.stream_address)
         
         return
     
@@ -182,7 +187,8 @@ class Procedure(shell.Shell):
         # Procedure
         package = ''
         package += 'units = "{}"\n'.format(self.units)
-        package += 'phorp_address = "{}"\n'.format(self.phorp_address)
+        package += 'stream_type = "{}"\n'.format(self.stream_type)
+        package += 'stream_address = "{}"\n'.format(self.stream_address)
         package += 'interval = {}\n'.format(self.interval.days)
         package += 'point_count = {}\n'.format(self.point_count)
         
@@ -196,7 +202,8 @@ class Procedure(shell.Shell):
     def unpack(self, package):
         # procedure
         self.units = package['units']
-        self.phorp_addr = package['phorp_address']
+        self.stream_type = package['stream_type']
+        self.stream_address = package['stream_address']
         self.interval = datetime.timedelta(days=package['interval'])
         self.point_count = package['point_count']
 
@@ -213,9 +220,11 @@ class EhProcedure(Procedure):
     intro = 'Eh Procedure Configuration'
     prompt = 'edit(Eh): '
 
-    def __init__(self, *kwargs):
-        super().__init__(*kwargs)
+    def __init__(self, streams, *kwargs):
+        super().__init__(streams, *kwargs)
 
+        self.stream_type = 'phorp'
+        
         self.type = 'eh'
         self.name = 'Eh'
         self.raw_units = 'mV'
@@ -236,8 +245,10 @@ class PhProcedure(Procedure):
     intro = 'pH Procedure Configuration'
     prompt = 'edit(pH): '
 
-    def __init__(self, *kwargs):
-        super().__init__(*kwargs)
+    def __init__(self, streams, *kwargs):
+        super().__init__(streams, *kwargs)
+
+        self.stream_type = 'phorp'
 
         self.type = 'ph'
         self.name = 'pH'
@@ -268,13 +279,13 @@ class Procedures(shell.Shell):
     intro = 'Sensor calibration procedures. ? for help.'
     prompt = 'procedures: '
 
-    def __init__(self, *kwargs):
+    def __init__(self, streams, *kwargs):
         super().__init__(*kwargs)
 
         self.procedures = dict()
-        self.procedures['ph'] = PhProcedure()
-        self.procedures['eh'] = EhProcedure()
-        # self.procedures['therm'] = ThermProcedure()
+        self.procedures['ph'] = PhProcedure(streams)
+        self.procedures['eh'] = EhProcedure(streams)
+        # self.procedures['therm'] = ThermProcedure(streams['phorp'])
 
         self.prompt = '{}'.format(self.cyan(self.prompt))
         

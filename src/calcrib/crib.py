@@ -12,12 +12,13 @@ class Crib(shell.Shell):
     intro = 'Welcome to the Calibration Toolcrib. ? for help.'
     prompt = 'crib: '
 
-    def __init__(self, i2c_bus, *kwargs):
+    def __init__(self, streams, *kwargs):
         super().__init__(*kwargs)
 
-        self.bus = i2c_bus
-        self.procedures = procedure.Procedures()
-        self.sensors = sensor.Sensors(self.bus, self.procedures)
+        #self.streams = streams # a dict of named stream types
+        
+        self.procedures = procedure.Procedures(streams)
+        self.sensors = sensor.Sensors(self.procedures)
 
         self.suffix = '.toml'
         self.filename = 'coefficients{}'.format(self.suffix)
