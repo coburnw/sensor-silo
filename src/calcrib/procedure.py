@@ -1,12 +1,12 @@
 import datetime
 
-import shell
-import coefficients
-import setpoint as sp
+from . import shell
+from . import coefficients
+from . import setpoint as sp
 
 class Procedure(shell.Shell):
     intro = 'Generic Procedure Configuration'
-    prompt = 'procedure(?): '
+    prompt = 'edit(?): '
 
     def __init__(self, *kwargs):
         super().__init__(*kwargs)
@@ -211,7 +211,7 @@ class Procedure(shell.Shell):
 
 class EhProcedure(Procedure):
     intro = 'Eh Procedure Configuration'
-    prompt = 'procedure(Eh): '
+    prompt = 'edit(Eh): '
 
     def __init__(self, *kwargs):
         super().__init__(*kwargs)
@@ -234,7 +234,7 @@ class EhProcedure(Procedure):
 
 class PhProcedure(Procedure):
     intro = 'pH Procedure Configuration'
-    prompt = 'procedure(pH): '
+    prompt = 'edit(pH): '
 
     def __init__(self, *kwargs):
         super().__init__(*kwargs)

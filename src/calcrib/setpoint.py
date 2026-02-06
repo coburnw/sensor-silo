@@ -1,8 +1,8 @@
 import sys
 import time
 
-import shell
-import statistics as rs
+from . import shell
+from . import statistics as rs
     
 class Setpoint(shell.Shell):
     intro = 'Calibration Setpoint Configuration'

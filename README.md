@@ -1,3 +1,4 @@
-# Python Coefficients
-a manager to generate and use sensor calibration coefficients
+# Python CalCrib
+A Toolcrib for your Sensor Calibration Data
 
+A simple database

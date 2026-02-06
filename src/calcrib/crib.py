@@ -1,17 +1,16 @@
 import sys
-#import time
 import datetime
 
 import smbus3 as smbus
 import tomli
 
-import shell
-import procedure
-import sensor
+from . import shell
+from . import procedure
+from . import sensor
 
-class CalShell(shell.Shell):
-    intro = 'Welcome to the Calibration Shell. ? for help.'
-    prompt = 'shell: '
+class Crib(shell.Shell):
+    intro = 'Welcome to the Calibration Toolcrib. ? for help.'
+    prompt = 'crib: '
 
     def __init__(self, i2c_bus, *kwargs):
         super().__init__(*kwargs)

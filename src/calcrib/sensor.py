@@ -1,9 +1,9 @@
-import shell
-import coefficients
-import phorp
-import setpoint as sp
+from . import shell
+from . import coefficients
+from . import phorp
+from . import setpoint as sp
 
-import frame_streams as fs
+from . import frame_streams as fs
 
 class Sensor():
     def __init__(self, i2c_bus, sensor_type, sensor_id):

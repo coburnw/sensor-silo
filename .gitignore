@@ -9,3 +9,4 @@ junk
 
 #python stuff
 __pycache__
+*.egg-info
