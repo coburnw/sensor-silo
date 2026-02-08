@@ -110,10 +110,10 @@ class PhStream(gs.RandomStream):
         self.set_description('uncalibrated potential of Hydrogen (pH)')
         self.set_units('milli_volts')
 
-        self.channel = channel
-        self.channel.sample_rate = 60
-        self.channel.pga_gain = 1
-        self.channel.continuous = False
+        # self.channel = channel
+        # self.channel.sample_rate = 60
+        # self.channel.pga_gain = 1
+        # self.channel.continuous = False
         
         self.filter = RollingAverage(filter_constant)
         

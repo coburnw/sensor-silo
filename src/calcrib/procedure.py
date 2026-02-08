@@ -12,13 +12,13 @@ class Procedure(shell.Shell):
         super().__init__(*kwargs)
 
         self.streams = streams
-        self.stream_type = ''
+        self.stream_type = None
+        self.stream_address = 'a2'
         
         self.units = ''
         self.point_count = 2
         self.setpoints = dict()
 
-        self.stream_address = 'a2'
         self.interval = datetime.timedelta(days=180)
 
         self.prompt = '{}'.format(self.cyan(self.prompt))
@@ -49,17 +49,17 @@ class Procedure(shell.Shell):
         ''' print present values'''
         
         print(' Configuration')
+        print('  Stream Type :  {}'.format(self.stream_type))
+        print('  Stream Address:  {}'.format(self.stream_address))
+        print()
         print('  Units:  {}'.format(self.units))
         print('  Spread: {} point'.format(self.point_count))
         print('   P1:    {} {}'.format(self.p1.value, self.p1.units))
         print('   P2:    {} {}'.format(self.p2.value, self.p2.units))
         if self.point_count == 3:
-            print('   P3:   {} {}'.format(self.p3.value, self.p2.units))
+            print('   P3:   {} {}'.format(self.p3.value, self.p3.units))
 
         print('  Interval: {} days'.format(self.interval.days))
-        print()
-        print('  Stream Type :  {}'.format(self.stream_type))
-        print('  Stream Address:  {}'.format(self.stream_address))
         
         return False
     
@@ -154,9 +154,10 @@ class Procedure(shell.Shell):
         sensor.sensor.name = self.name
         sensor.sensor.raw_units = self.raw_units
         sensor.sensor.units = self.units
-        sensor.sensor.coefficients.interval = self.interval
-        
-        sensor.sensor.connect(self.streams[self.stream_type], self.stream_address)
+        sensor.sensor.calibration.interval = self.interval
+
+        stream = self.streams[self.stream_type]() # create a new stream instance
+        sensor.sensor.connect(stream, self.stream_address) # and override deployed address
         
         return
     
@@ -165,7 +166,7 @@ class Procedure(shell.Shell):
 
         ok = True
         for setpoint in sensor.setpoints.values():
-            if not setpoint.run(sensor):
+            if not setpoint.run(sensor.sensor):
                 ok = False
                 break
 
@@ -173,13 +174,11 @@ class Procedure(shell.Shell):
             p1 = sensor.setpoints[self.p1.name]
             p2 = sensor.setpoints[self.p2.name]
 
-            if sensor.sensor.coefficients.generate(p1.value,p1.mean, p2.value,p2.mean):
+            if sensor.sensor.calibration.generate(p1.value,p1.mean, p2.value,p2.mean):
                 # prompt here to accept...
-                sensor.sensor.coefficients.timestamp = datetime.date.today() #+ duration
+                sensor.sensor.calibration.timestamp = datetime.date.today()
             
-            #sensor.sensor.coefficients.generate(4.0,0.180, 8.0,-0.061)
-            
-        sensor.coefficients.dump()
+        sensor.sensor.calibration.dump()
 
         return
 
@@ -214,79 +213,18 @@ class Procedure(shell.Shell):
                 self.setpoints[setpoint.name] = setpoint
             
         return
-    
-
-class EhProcedure(Procedure):
-    intro = 'Eh Procedure Configuration'
-    prompt = 'edit(Eh): '
-
-    def __init__(self, streams, *kwargs):
-        super().__init__(streams, *kwargs)
-
-        self.stream_type = 'phorp'
         
-        self.type = 'eh'
-        self.name = 'Eh'
-        self.raw_units = 'mV'
-        self.units = 'mV'
-
-        # the default setpoint settings.
-        self.setpoints['p1'] = sp.Setpoint('p1', self.units, 0.0)
-        self.setpoints['p2'] = sp.Setpoint('p2', self.units, 225)
-
-        return
-
-    def quality(self, sensor):
-        print(' Not implemented ')
-            
-        return
-
-class PhProcedure(Procedure):
-    intro = 'pH Procedure Configuration'
-    prompt = 'edit(pH): '
-
-    def __init__(self, streams, *kwargs):
-        super().__init__(streams, *kwargs)
-
-        self.stream_type = 'phorp'
-
-        self.type = 'ph'
-        self.name = 'pH'
-        self.raw_units = 'mV'
-        self.units = 'pH'
-
-        # the default setpoint settings.
-        self.setpoints['p1'] = sp.Setpoint('p1', self.units, 4.0)
-        self.setpoints['p2'] = sp.Setpoint('p2', self.units, 7.0)
-        self.setpoints['p3'] = sp.Setpoint('p3', self.units, 10.0)
-
-        return
-
-    def quality(self, sensor):
-        if not  sensor.config.coefficients.is_valid:
-            print(' Sensor out of calibration: ')
-            
-        slope = sensor.config.coefficients.coefficients['slope']
-        offset = sensor.config.coefficients.evaluate_x(7.0)
-        
-        print(' slope = {} mV/unit '.format(round(slope*1000,3)))
-        print(' offset = {} mV'.format(round(offset*1000,3)))
-
-        return
-    
     
 class Procedures(shell.Shell):
     intro = 'Sensor calibration procedures. ? for help.'
     prompt = 'procedures: '
 
-    def __init__(self, streams, *kwargs):
+    # def __init__(self, procedures, streams, *kwargs):
+    def __init__(self, procedures, *kwargs):
         super().__init__(*kwargs)
 
-        self.procedures = dict()
-        self.procedures['ph'] = PhProcedure(streams)
-        self.procedures['eh'] = EhProcedure(streams)
-        # self.procedures['therm'] = ThermProcedure(streams['phorp'])
-
+        self.procedures = procedures
+        
         self.prompt = '{}'.format(self.cyan(self.prompt))
         
         return

@@ -8,30 +8,45 @@ import frame_streams as fs
 import calcrib
 
 class PhorpStream(calcrib.Stream):
-    def __init__(self, i2c_bus):
-        super().__init__('phorp')
+    i2c_bus = None
+    
+    def __init__(self):
+        super().__init__(self.__class__.__name__)
         
-        self.bus = i2c_bus        
+        self.bus = self.get_i2c_bus()
         self.channel = None
+        self.address = None
+
+        self._raw_value = 0
         
         return
 
+    @classmethod
+    def get_i2c_bus(cls):
+        return cls.i2c_bus
+    
     def connect(self, address):
-        board_index, channel_index = self.split_address(address)
-
-        board = phorp.PhorpX4(self.bus, board_index)
-        self.channel = fs.PhStream(board[int(channel_index)], 'ph_cal', filter_constant=1)
+        self.address = address
+        
+        board = phorp.PhorpX4(self.bus, self.board_index)
+        self.channel = board[self.channel_index]
+        
+        self.channel.sample_rate = 60
+        self.channel.pga_gain = 1
+        self.channel.continuous = False
 
         return
 
     def update(self):
-        self.channel.update()
+        self.channel.start_conversion()
+        time.sleep(self.channel.conversion_time)
+        self._raw_value = self.channel.get_conversion_volts()
 
         return
 
     def split_address(self, address):
         board_index = address[0].lower()
-        channel_index = address[1]
+        channel_index = int(address[1])
 
         return (board_index, channel_index)
 
@@ -49,29 +64,96 @@ class PhorpStream(calcrib.Stream):
 
     @property
     def raw_value(self):
-        ''' returns a float'''
-        return self.channel.raw_value
+        ''' returns the result of the last update() as a float'''
+        return self._raw_value
     
     @property
     def raw_units(self):
         ''' returns a string'''
         return 'V'
+    
+    
+class EhProcedure(calcrib.Procedure):
+    intro = 'Eh Procedure Configuration'
+    prompt = 'edit(Eh): '
+    
+    def __init__(self, streams, *kwargs):
+        super().__init__(streams, *kwargs)
+        
+        self.stream_type = 'PhorpStream'
+        
+        self.type = 'eh'
+        self.name = 'Eh'
+        self.raw_units = 'mV'
+        self.units = 'mV'
 
+        # the default setpoint settings.
+        self.setpoints['p1'] = calcrib.Setpoint('p1', self.units, 0.0)
+        self.setpoints['p2'] = calcrib.Setpoint('p2', self.units, 225)
+
+        return
+
+    def quality(self, sensor):
+        print(' Not implemented ')
+
+        return
+
+    
+class PhProcedure(calcrib.Procedure):
+    intro = 'pH Procedure Configuration'
+    prompt = 'edit(pH): '
+
+    def __init__(self, streams, *kwargs):
+        super().__init__(streams, *kwargs)
+
+        self.stream_type = 'PhorpStream'
+
+        self.type = 'ph'
+        self.name = 'pH'
+        self.raw_units = 'mV'
+        self.units = 'pH'
+
+        # the default setpoint settings.
+        self.setpoints['p1'] = calcrib.Setpoint('p1', self.units, 4.0)
+        self.setpoints['p2'] = calcrib.Setpoint('p2', self.units, 7.0)
+        self.setpoints['p3'] = calcrib.Setpoint('p3', self.units, 10.0)
+
+        return
+
+    def quality(self, sensor):
+        if not  sensor.config.coefficients.is_valid:
+            print(' Sensor out of calibration: ')
+
+        slope = sensor.config.coefficients.coefficients['slope']
+        offset = sensor.config.coefficients.evaluate_x(7.0)
+
+        print(' slope = {} mV/unit '.format(round(slope*1000,3)))
+        print(' offset = {} mV'.format(round(offset*1000,3)))
+
+        return
+
+    
 if __name__ == '__main__':
 
     config = True
-    
+
+    procedures = dict()
     streams = dict()
     
-    with smbus.SMBus(1) as bus:    
-        stream = PhorpStream(bus)
-        streams[stream.type] = stream
+    with smbus.SMBus(1) as bus:
+        PhorpStream.i2c_bus = bus
+        streams[PhorpStream.__name__] = PhorpStream
     
         if config == True:
-            shell = calcrib.Crib(streams)
+            procedures['ph'] = PhProcedure(streams)
+            procedures['eh'] = EhProcedure(streams)
+            # self.procedures['therm'] = ThermProcedure(streams['phorp'])
+
+            shell = calcrib.Shell(procedures)
             shell.cmdloop()
         else:
             # load toml file, initialize sensors, and run
+            deploy = calcrib.Deploy(streams)
             pass
 
     exit()

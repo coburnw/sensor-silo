@@ -1,23 +1,47 @@
 import sys
 import datetime
 
-import smbus3 as smbus
+#import smbus3 as smbus
 import tomli
 
 from . import shell
 from . import procedure
 from . import sensor
 
-class Crib(shell.Shell):
-    intro = 'Welcome to the Calibration Toolcrib. ? for help.'
-    prompt = 'crib: '
-
+class Deploy():
     def __init__(self, streams, *kwargs):
         super().__init__(*kwargs)
 
-        #self.streams = streams # a dict of named stream types
+        self.deployment = deployment.Deployment(streams)
+        self.sensors = sensor.Sensors(self.deployment)
+
+        self.suffix = '.toml'
+        self.filename = 'coefficients{}'.format(self.suffix)
+
+        return
+
+    def load(self):
+        ''' load sensor configuration file'''
+
+        filename = self.get_filename()
+        package = ''
+        print(' Loading sensor data from {}'.format(filename))
+        with open(filename, 'rb') as fp:
+            package = tomli.load(fp)
+
+        self.unpack(package)
         
-        self.procedures = procedure.Procedures(streams)
+        return
+    
+    
+class Shell(shell.Shell):
+    intro = 'Welcome to the Calibration Toolcrib. ? for help.'
+    prompt = 'crib: '
+
+    def __init__(self, procedures, *kwargs):
+        super().__init__(*kwargs)
+
+        self.procedures = procedure.Procedures(procedures)
         self.sensors = sensor.Sensors(self.procedures)
 
         self.suffix = '.toml'

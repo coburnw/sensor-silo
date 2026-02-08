@@ -2,9 +2,6 @@ from . import shell
 from . import coefficients
 from . import setpoint as sp
 
-# from . import phorp
-# from . import frame_streams as fs
-
 class Stream():    
     def __init__(self, type):
         self.type = type
@@ -42,7 +39,7 @@ class Sensor():
         self.location = ''
         self.address = 'a1'
 
-        self.coefficients = coefficients.Coefficients()
+        self.calibration = coefficients.Coefficients()
 
         return
 
@@ -65,7 +62,7 @@ class Sensor():
         return self.evaluate(self.raw_value)
 
     def evaluate(self, raw_value):
-        return self.coefficients.evaluate_y(raw_value)
+        return self.calibration.evaluate_y(raw_value)
 
     def update(self):
         self.stream.update()
@@ -99,7 +96,7 @@ class SensorShell(shell.Shell):
     
     @property
     def prompt(self):
-        if self.sensor.coefficients.is_valid:
+        if self.sensor.calibration.is_valid:
             prompt = '{} {}: '.format(self.cyan('edit'), self.green(self.id))
         else:
             prompt = '{} {}: '.format(self.cyan('edit'), self.red(self.id))
@@ -123,7 +120,7 @@ class SensorShell(shell.Shell):
 
         print('  Stream Type:  {}'.format(self.sensor.stream.type))
         print('  Stream Address:  {}'.format(self.sensor.address))
-        print('  calibration due: {}'.format(self.sensor.coefficients.due_date))
+        print('  calibration due: {}'.format(self.sensor.calibration.due_date))
         
         return False
 
@@ -173,7 +170,7 @@ class SensorShell(shell.Shell):
         for setpoint in self.setpoints.values():
             print(setpoint.dump())
             
-        self.sensor.coefficients.dump()
+        self.sensor.calibration.dump()
 
         return
 
@@ -212,7 +209,7 @@ class SensorShell(shell.Shell):
     
     @property
     def is_calibrated(self):
-        return self.sensor.coefficients.is_valid
+        return self.sensor.calibration.is_valid
     
     def pack(self, prefix):
         # sensor
@@ -223,13 +220,15 @@ class SensorShell(shell.Shell):
         package += '\n'
         
         if self.is_calibrated:
-            my_prefix = '{}.{}'.format(prefix, 'coefficients')
-            package += self.sensor.coefficients.pack(my_prefix)
+            my_prefix = '{}.{}'.format(prefix, 'calibration')
+            package += self.sensor.calibration.pack(my_prefix)
+            package += '\n'
 
             my_prefix = '{}.{}'.format(prefix, 'setpoints')
             for setpoint in self.setpoints.values():
                 setpoint_prefix = '{}.{}'.format(my_prefix, setpoint.name)
                 package += '{}\n'.format(setpoint.pack(setpoint_prefix))
+                # package += '\n'
 
         return package
 
@@ -240,8 +239,8 @@ class SensorShell(shell.Shell):
         self.sensor.address = package['address']
 
         if 'coefficients' in package:
-            self.sensor.coefficients = coefficients.Coefficients()
-            self.sensor.coefficients.unpack(package['coefficients'])
+            self.sensor.calibration = coefficients.Coefficients()
+            self.sensor.calibration.unpack(package['calibration'])
             
         if 'setpoints' in package:
             for values in package['setpoints'].values():
@@ -259,7 +258,6 @@ class Sensors(shell.Shell):
     def __init__(self, procedures, *kwargs):
         super().__init__(*kwargs)
         
-        #self.streams = streams
         self.procedures = procedures
         
         self.sensors = dict()
@@ -346,12 +344,12 @@ class Sensors(shell.Shell):
     def new_sensor(self, sensor_type, sensor_id):
         print(' creating new {} sensor {}'.format(sensor_type, sensor_id))
 
-        stream_type = self.procedures[sensor_type].stream_type
         sensor = SensorShell(sensor_type, sensor_id)
         
         self.sensors[sensor_id] = sensor
         self.sensor_index = self.last_index
 
+        # self.deploy.prep(sensor)
         self.procedure.prep(sensor)
 
         return sensor
@@ -460,7 +458,7 @@ class Sensors(shell.Shell):
         #print(package)
         for sensor_key, template in package.items():
             if sensor_key in self.sensors.keys():
-                print(' sensor already exists. ignoring.')
+                print(' Error: sensor already exists. ignoring.')
             else:
                 sensor = self.new_sensor(template['type'], template['id'])
                 sensor.unpack(template)
