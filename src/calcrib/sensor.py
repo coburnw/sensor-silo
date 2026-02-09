@@ -69,6 +69,47 @@ class Sensor():
 
         return
     
+    def pack(self, prefix):
+        # sensor
+        package = ''
+        package += 'id = "{}"\n'.format(self.id)
+        package += 'type = "{}"\n'.format(self.sensor.type)
+        package += 'address = "{}"\n'.format(self.sensor.address)
+        package += '\n'
+        
+        if self.is_calibrated:
+            my_prefix = '{}.{}'.format(prefix, 'calibration')
+            package += self.sensor.calibration.pack(my_prefix)
+            package += '\n'
+
+            my_prefix = '{}.{}'.format(prefix, 'setpoints')
+            for setpoint in self.setpoints.values():
+                setpoint_prefix = '{}.{}'.format(my_prefix, setpoint.name)
+                package += '{}\n'.format(setpoint.pack(setpoint_prefix))
+                # package += '\n'
+
+        return package
+
+    def unpack(self, package):
+        # sensor
+        self.id = package['id']
+        self.sensor.type = package['type']
+        self.sensor.address = package['address']
+
+        if 'coefficients' in package:
+            self.sensor.calibration = coefficients.Coefficients()
+            self.sensor.calibration.unpack(package['calibration'])
+            
+        if 'setpoints' in package:
+            for values in package['setpoints'].values():
+                print('  loading setpoint {}'.format(values['name']))
+                setpoint = sp.Setpoint('','','')
+                setpoint.unpack(values)
+                self.setpoints[setpoint.name] = setpoint
+            
+        return
+
+
 class SensorShell(shell.Shell):
     intro = 'Sensor Configuration.  Blank line to return to previous menu.'
     # prompt = 'sensor: '
@@ -211,43 +252,44 @@ class SensorShell(shell.Shell):
     def is_calibrated(self):
         return self.sensor.calibration.is_valid
     
+
+
+class Sensors():
+    def __init__(self, package=None):
+        self.sensors = dict()
+
+        if package is not None:
+            self.unpack(package)
+            
+        return
+
+    def __len__(self):
+        return len(self.sensors)
+    
+    def __getitem__(self, key):
+        return self.sensors[key]
+
     def pack(self, prefix):
-        # sensor
-        package = ''
-        package += 'id = "{}"\n'.format(self.id)
-        package += 'type = "{}"\n'.format(self.sensor.type)
-        package += 'address = "{}"\n'.format(self.sensor.address)
-        package += '\n'
-        
-        if self.is_calibrated:
-            my_prefix = '{}.{}'.format(prefix, 'calibration')
-            package += self.sensor.calibration.pack(my_prefix)
-            package += '\n'
+        # Sensors
+        package = '[{}]\n'.format(prefix)
 
-            my_prefix = '{}.{}'.format(prefix, 'setpoints')
-            for setpoint in self.setpoints.values():
-                setpoint_prefix = '{}.{}'.format(my_prefix, setpoint.name)
-                package += '{}\n'.format(setpoint.pack(setpoint_prefix))
-                # package += '\n'
-
+        for key, sensor in self.sensors.items():
+            sensor_prefix = '{}.{}'.format(prefix, key)
+            package += '[{}]\n'.format(sensor_prefix)
+            package += '{}\n'.format(sensor.pack(sensor_prefix))
+            
         return package
 
     def unpack(self, package):
-        # sensor
-        self.id = package['id']
-        self.sensor.type = package['type']
-        self.sensor.address = package['address']
-
-        if 'coefficients' in package:
-            self.sensor.calibration = coefficients.Coefficients()
-            self.sensor.calibration.unpack(package['calibration'])
-            
-        if 'setpoints' in package:
-            for values in package['setpoints'].values():
-                print('  loading setpoint {}'.format(values['name']))
-                setpoint = sp.Setpoint('','','')
-                setpoint.unpack(values)
-                self.setpoints[setpoint.name] = setpoint
+        #print(package)
+        for sensor_key, template in package.items():
+            if sensor_key in self.sensors.keys():
+                print(' Error: sensor already exists. ignoring.')
+            else:
+                sensor = self.new_sensor(template['type'], template['id'])
+                sensor.unpack(template)
+                self.sensors[sensor_key] = sensor
+                #print(sensor)
             
         return
 
@@ -260,7 +302,7 @@ class SensorsShell(shell.Shell):
         
         self.procedures = procedures
         
-        self.sensors = dict()
+        self.sensors = Sensors()
         self.sensor_index = 0
 
         return
@@ -443,27 +485,3 @@ class SensorsShell(shell.Shell):
         
         return False
     
-    def pack(self, prefix):
-        # Sensors
-        package = '[{}]\n'.format(prefix)
-
-        for key, sensor in self.sensors.items():
-            sensor_prefix = '{}.{}'.format(prefix, key)
-            package += '[{}]\n'.format(sensor_prefix)
-            package += '{}\n'.format(sensor.pack(sensor_prefix))
-            
-        return package
-
-    def unpack(self, package):
-        #print(package)
-        for sensor_key, template in package.items():
-            if sensor_key in self.sensors.keys():
-                print(' Error: sensor already exists. ignoring.')
-            else:
-                sensor = self.new_sensor(template['type'], template['id'])
-                sensor.unpack(template)
-                self.sensors[sensor_key] = sensor
-                #print(sensor)
-            
-        return
-
