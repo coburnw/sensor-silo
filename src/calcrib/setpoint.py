@@ -3,22 +3,13 @@ import time
 
 from . import shell
 from . import statistics as rs
-    
-class Setpoint(shell.Shell):
-    intro = 'Calibration Setpoint Configuration'
-    prompt = 'point: '
+from . import parameter
 
+class Setpoint(parameter.ParameterShell):
     def __init__(self, name, units, value, *kwargs):
-        super().__init__(*kwargs)
+        super().__init__(name, units, value, *kwargs)
 
-        self.name = name
-        self.possible_units = ['eh', 'ph']
-
-        if units.lower() not in self.possible_units:
-            pass
-        
-        self.scaled_units = units
-        self.scaled_value = value
+        self.title = 'Calibration Setpoint'
 
         self.sample_period = 0.2
         self.update_period = 1
@@ -27,21 +18,6 @@ class Setpoint(shell.Shell):
         self.stats = rs.RunningStats()
         
         return
-
-    def do_show(self, arg=None):
-        ''' print present values'''
-        print(' Calibration Point')
-        print('  Units:   {}'.format(self.scaled_units))
-        print('  Value:   {} {}'.format(self.scaled_value, self.scaled_units))
-            
-        return False
-    
-    def do_value(self, arg):
-        ''' the first (lowest pH) in a two or three point calibration'''
-        self.scaled_value = float(arg)
-
-        self.do_show()
-        return False
 
     @property
     def n(self):
@@ -120,6 +96,8 @@ class Setpoint(shell.Shell):
 
     def pack(self, prefix):
         # Calibration SetPoint
+
+        # package = super().pack(prefix)
         package = ''
         package += '[{}]\n'.format(prefix)
         

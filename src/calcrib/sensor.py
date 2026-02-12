@@ -1,10 +1,13 @@
 import collections
 
 from . import shell
-from . import coefficients
 from . import setpoint as sp
 
-class Stream():    
+from . import calibration
+from . import polynomial
+from . import thermistor
+
+class Stream():
     def __init__(self, type):
         self.type = type
 
@@ -17,11 +20,6 @@ class Stream():
     def update(self):
         ''' complete a conversion'''
         raise NotImplemented
-    
-    # @property
-    # def address(self):
-    #     ''' returns the current address '''
-    #     raise NotImplemented
     
     @property
     def raw_value(self):
@@ -39,15 +37,20 @@ class Sensor():
         self.type = sensor_type
         self.id = sensor_id.strip()
 
-        self.stream = None  # configured by procedure
+        print('Sensor.__init__()')
+        
+        self.stream_type = None
+        
+        # configured by procedure/deploy.prep()
+        self.stream = None
+        self.setpoints = dict()
+        self.calibration = calibration.Calibration()
+
         
         # deployed sensor values
         self.name = ''
         self.location = ''
         self.address = 'ND'
-
-        self.calibration = coefficients.Coefficients()
-        self.setpoints = dict()
 
         return
 
@@ -81,7 +84,7 @@ class Sensor():
         return self.calibration.scaled_units
 
     def evaluate(self, raw_value):
-        return self.calibration.evaluate_y(raw_value)
+        return self.calibration.equation.evaluate_y(raw_value)
 
     def update(self):
         self.stream.update()
@@ -96,6 +99,8 @@ class Sensor():
 
         package += 'name = "{}"\n'.format(self.name)
         package += 'location = "{}"\n'.format(self.location)
+
+        package += 'stream_type = "{}"\n'.format(self.stream_type)
         package += 'address = "{}"\n'.format(self.address)
         
         if self.calibration.is_valid:
@@ -103,11 +108,12 @@ class Sensor():
             package += '\n'
             package += self.calibration.pack(my_prefix)
 
-            my_prefix = '{}.{}'.format(prefix, 'setpoints')
-            for setpoint in self.setpoints.values():
-                setpoint_prefix = '{}.{}'.format(my_prefix, setpoint.name)
-                package += '\n'
-                package += setpoint.pack(setpoint_prefix)
+            if len(self.setpoints) > 0:
+                my_prefix = '{}.{}'.format(prefix, 'setpoints')
+                for setpoint in self.setpoints.values():
+                    setpoint_prefix = '{}.{}'.format(my_prefix, setpoint.name)
+                    package += '\n'
+                    package += setpoint.pack(setpoint_prefix)
 
         return package
 
@@ -118,12 +124,20 @@ class Sensor():
         
         self.name = package.get('name', '')
         self.location = package.get('location', '')
+        self.stream_type = package.get('stream_type')
         self.address = package.get('address', 'ND')
 
         if 'calibration' in package:
-            self.calibration = coefficients.Coefficients()
-            self.calibration.unpack(package['calibration'])
+            self.calibration = calibration.Calibration(package['calibration'])
+            #parcel = package['calibration']
             
+            # if parcel['type'] == 'PolynomialEquation':
+            #     self.calibration = polynomial.PolynomialEquation(parcel)
+            # elif parcel['type'] == 'PhorpThermistorEquation':
+            #     self.calibration = thermistor.PhorpThermistorEquation(parcel)
+            # else:
+            #     print('sensor.unpack() Unrecognized calibration equation: {}'.format(parcel['type']))
+                
         if 'setpoints' in package:
             for values in package['setpoints'].values():
                 setpoint = sp.Setpoint('','','')
@@ -137,12 +151,11 @@ class SensorShell(shell.Shell):
     intro = 'Sensor Configuration.  Blank line to return to previous menu.'
     # prompt = 'sensor: '
 
-    def __init__(self, sensor, *kwargs):
+    def __init__(self, sensor, procedure, *kwargs):
         super().__init__(*kwargs)
 
         self.sensor = sensor
-        
-        #self.setpoints = None  # a dict() configured by Procedure.prep()
+        self.procedure = procedure
         
         return
 
@@ -215,11 +228,31 @@ class SensorShell(shell.Shell):
         
         return False
 
-    def dump(self):
-        for setpoint in self.sensor.setpoints.values():
-            print(setpoint.dump())
+    def do_cal(self, arg):
+        ''' acquire sensor calibration data'''
+        self.procedure.run(self.sensor)
             
-        self.sensor.calibration.dump()
+        return
+
+    def do_meas(self, arg):
+        ''' meas <mV> Evaluates mV in engineering units, sensor value if blank.'''
+        if len(arg.strip()) == 0:
+            self.meas(arg)
+            #SensorShell(self.sensor).meas(arg)
+        else:
+            self.eval(arg)
+            #SensorShell(self.sensor).eval(arg)
+        
+        return False
+
+    def do_quality(self, arg):
+        ''' evaluate sensor quality '''
+        self.procedure.quality(self.sensor)
+        
+        return False
+    
+    def dump(self):
+        print(self.sensor.pack(self.sensor.id))
 
         return
 
@@ -371,9 +404,9 @@ class SensorsShell(shell.Shell):
             return
 
         sensor = self.new_sensor(sensor_type, sensor_key)
-        sensor_shell = SensorShell(sensor)
-        
-        sensor_shell.do_show()
+        #sensor_shell = SensorShell(sensor, self.procedure)
+        #sensor_shell.do_show()
+        self.do_edit('')
         
         return
 
@@ -389,6 +422,12 @@ class SensorsShell(shell.Shell):
 
         return sensor
         
+    def do_edit(self, arg):
+        ''' edit selected sensor'''
+        SensorShell(self.sensor, self.procedure).cmdloop()
+
+        return
+    
     def do_del(self, arg=None):
         ''' delete sensor. del<ret> selected sensor, del <sensor_id> '''
         if arg:
@@ -409,12 +448,6 @@ class SensorsShell(shell.Shell):
 
         return
             
-    def do_edit(self, arg):
-        ''' edit selected sensor'''
-        SensorShell(self.sensor).cmdloop()
-
-        return
-    
     def do_list(self, arg):
         ''' list available sensors '''
 
@@ -456,27 +489,6 @@ class SensorsShell(shell.Shell):
             self.sensor_index = self.last_index
 
         return
-    
-    def do_cal(self, arg):
-        ''' acquire sensor calibration data'''
-        self.procedure.run(self.sensor)
-            
-        return
-
-    def do_meas(self, arg):
-        ''' meas <mV> Evaluates mV in engineering units, sensor value if blank.'''
-        if len(arg.strip()) == 0:
-            SensorShell(self.sensor).meas(arg)
-        else:
-            SensorShell(self.sensor).eval(arg)
-        
-        return False
-
-    def do_quality(self, arg):
-        ''' evaluate sensor quality '''
-        self.procedure.quality(self.sensor)
-        
-        return False
     
     def pack(self, prefix):
         package = self.sensors.pack(prefix)

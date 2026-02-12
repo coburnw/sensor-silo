@@ -83,23 +83,23 @@ class PhorpStream(calcrib.Stream):
         return 'mV'
     
     
-class EhProcedure(calcrib.Procedure):
-    intro = 'Eh Procedure Configuration'
-    prompt = 'edit(Eh): '
+class ThermistorProcedure(calcrib.ThermistorProcedure):
+    intro = 'Thermistor Configuration'
+    prompt = 'edit(Therm): '
     
     def __init__(self, streams, *kwargs):
         super().__init__(streams, *kwargs)
-        
+
         self.stream_type = 'PhorpStream'
+        self.stream_address = 'a1'
         
-        self.type = 'eh'
-        self.name = 'Eh'
-        self.raw_units = 'mV'
-        self.units = 'mV'
+        self.type = 'therm'
+        self.name = 'Thermistor'
+        self.scaled_units = 'deg C'
 
         # the default setpoint settings.
-        self.setpoints['p1'] = calcrib.Setpoint('p1', self.units, 0.0)
-        self.setpoints['p2'] = calcrib.Setpoint('p2', self.units, 225)
+        self.parameters['beta'] = calcrib.Constant('beta', 'K', 3574.6)
+        self.parameters['r25'] = calcrib.Constant('r25', 'Ohms', 10000)
 
         return
 
@@ -109,7 +109,33 @@ class EhProcedure(calcrib.Procedure):
         return
 
     
-class PhProcedure(calcrib.Procedure):
+class EhProcedure(calcrib.PolynomialProcedure):
+    intro = 'Eh Procedure Configuration'
+    prompt = 'edit(Eh): '
+    
+    def __init__(self, streams, *kwargs):
+        super().__init__(streams, *kwargs)
+        
+        self.stream_type = 'PhorpStream'
+        self.stream_address = 'a2'
+        
+        self.type = 'eh'
+        self.name = 'Eh'
+        self.units = 'mV'
+
+        # the default setpoint settings.
+        self.parameters['p1'] = calcrib.Setpoint('p1', self.units, 0.0)
+        self.parameters['p2'] = calcrib.Setpoint('p2', self.units, 225)
+
+        return
+
+    def quality(self, sensor):
+        print(' Not implemented ')
+
+        return
+
+    
+class PhProcedure(calcrib.PolynomialProcedure):
     intro = 'pH Procedure Configuration'
     prompt = 'edit(pH): '
 
@@ -124,16 +150,17 @@ class PhProcedure(calcrib.Procedure):
         self.scaled_units = 'pH'
 
         # the default setpoint settings.
-        self.setpoints['p1'] = calcrib.Setpoint('p1', self.scaled_units, 4.0)
-        self.setpoints['p2'] = calcrib.Setpoint('p2', self.scaled_units, 7.0)
-        self.setpoints['p3'] = calcrib.Setpoint('p3', self.scaled_units, 10.0)
+        self.parameters['p1'] = calcrib.Setpoint('p1', self.scaled_units, 4.0)
+        self.parameters['p2'] = calcrib.Setpoint('p2', self.scaled_units, 7.0)
+        self.parameters['p3'] = calcrib.Setpoint('p3', self.scaled_units, 10.0)
 
         return
 
     def quality(self, sensor):
         if not  sensor.calibration.is_valid:
             print(' Sensor out of calibration: ')
-
+            return
+        
         slope = sensor.calibration.coefficients['slope']
         offset = sensor.calibration.evaluate_x(7.0)
 
@@ -145,25 +172,33 @@ class PhProcedure(calcrib.Procedure):
     
 if __name__ == '__main__':
 
-    config = True
+    config = False
+    if len(sys.argv) > 1:
+        config = True
 
-    procedures = dict()
-    streams = dict()
-    
     with smbus.SMBus(1) as bus:
+        streams = dict()
         PhorpStream.i2c_bus = bus
         streams[PhorpStream.__name__] = PhorpStream
     
         if config == True:
+            procedures = dict()
             procedures['ph'] = PhProcedure(streams)
             procedures['eh'] = EhProcedure(streams)
-            # self.procedures['therm'] = ThermProcedure(streams['phorp'])
+            procedures['therm'] = ThermistorProcedure(streams)
 
             shell = calcrib.Shell(procedures)
             shell.cmdloop()
         else:
             # load toml file, initialize sensors, and run
-            deploy = calcrib.Deploy(streams)
-            pass
+            project = calcrib.Deploy()
+            project.load()
+            project.connect(streams)
+            while True:
+                for sensor in project.sensors.values():
+                    sensor.update()
+                    print(sensor.name, sensor.scaled_value, sensor.scaled_units)
+                    time.sleep(0.5)
+            
 
     exit()

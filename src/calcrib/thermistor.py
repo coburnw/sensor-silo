@@ -1,0 +1,181 @@
+import math
+
+from . import parameter
+from . import procedure
+from . import equation
+
+class ThermistorProcedure(procedure.ProcedureShell):
+    def __init__(self, streams, *kwargs):
+        super().__init__(streams, *kwargs)
+
+        self.parameters = dict()
+        
+        return
+
+    @property
+    def r25(self):
+        return self.parameters['r25']
+
+    @property
+    def beta(self):
+        return self.parameters['beta']
+
+    def do_beta(self, arg):
+        ''' beta <n> The thermistors defined beta value'''
+        
+        try:
+            self.beta.scaled_value = float(arg)
+        except:
+            print(' invalid value: beta unchanged.')
+
+        self.do_show()
+        
+        return False
+        
+    def do_r25(self, arg):
+        ''' r25 <n> The thermistors resistance in ohms at 25 Celsius'''
+        
+        try:
+            self.r25.scaled_value = float(arg)
+        except:
+            print(' invalid value: r25 unchanged.')
+
+        self.do_show()
+        
+        return False
+        
+    def show(self):
+        print('  Units:  {}'.format(self.scaled_units))
+        print('   R25:    {} {}'.format(self.r25.scaled_value, self.r25.scaled_units))
+        print('   Beta:   {}'.format(self.beta.scaled_value))
+
+        return
+
+    def prep(self, sensor):
+        if sensor.calibration.equation is None:
+            sensor.calibration.equation = PhorpThermistorEquation()
+            
+        sensor.calibration.equation.beta = self.parameters['beta'].scaled_value
+        sensor.calibration.equation.r25 = self.parameters['r25'].scaled_value
+        
+        super().prep(sensor)
+
+        return
+        
+    def cal(self, sensor):
+        ok = True
+
+        return ok
+
+    def pack(self, prefix):
+        package = super().pack(prefix)
+    
+        my_prefix = '{}.{}'.format(prefix, 'parameters')
+        for param in self.parameters.values():
+            parameter_prefix = '{}.{}'.format(my_prefix, param.name)
+            package += '\n'
+            package += param.pack(parameter_prefix)
+        
+        return package
+
+    def unpack(self, package):
+        super().unpack(package)
+
+        if 'parameters' in package:        
+            for template in package['parameters'].values():
+                param = parameter.Constant('','','')
+                param.unpack(template)
+                self.parameters[param.name] = param
+            
+        return
+
+    
+class BetaThermistorEquation(equation.Equation):
+    def __init__(self, package=None):
+        super().__init__()
+
+        self.beta = 3500
+        self.r25 = 10000
+        self.t0 = 273.15 # freezing point of water in degrees Kelvin
+        
+        if package:
+            self.unpack(package)
+
+        return
+
+    def to_kelvin(self, ntc_ohms):
+        t25 = self.t0 + 25.0
+        try:
+            kelvin = 1.0 / ( 1.0/t25 + (1.0/self.beta) * math.log(ntc_ohms/self.r25) )
+        except ValueError:
+            kelvin = 0
+
+        return kelvin
+    def to_celcius(self, ntc_ohms):
+        kelvin = self.to_kelvin(ntc_ohms)
+        celcius = kelvin - self.t0
+
+        return celcius
+
+    def to_fahrenheit(self, ntc_ohms):
+        celcius = self.to_celcius(ntc_ohms)
+        fahrenheit = 9.0/5.0 * celcius + 32
+
+        return fahrenheit
+
+    def pack(self, prefix):
+        package = super().pack(prefix)
+        
+        package += 'beta = {}\n'.format(self.beta)
+        package += 'r25 = {}\n'.format(self.r25)
+
+        return package
+
+    def unpack(self, package):
+        super().unpack(package)
+        
+        self.beta = package['beta']
+        self.r25 = package['r25']
+        
+        return
+    
+class PhorpThermistorEquation(BetaThermistorEquation):
+    def __init__(self, package=None):
+        super().__init__()
+
+        self.bias_volts = 1.5
+        self.bias_ohms = 10000
+
+        if package:
+            self.unpack(package)
+        
+        print('PhorpThermistorEquation done')
+            
+        return
+
+    def evaluate_y(self, ntc_millivolts):  # target_units
+        ntc_volts = ntc_millivolts / 1000  # convert back to volts...
+        
+        ntc_amps = (self.bias_volts - ntc_volts) / self.bias_ohms
+        ntc_ohms = ntc_volts / ntc_amps
+
+        #if 'c' in self.scaled_units.lower():
+        return self.to_celcius(ntc_ohms)
+
+        #return self.to_fahrenheit(ntc_ohms)
+
+    def pack(self, prefix):
+        package = super().pack(prefix)
+        
+        package += 'bias_volts = {}\n'.format(self.bias_volts)
+        package += 'bias_ohms = {}\n'.format(self.bias_ohms)
+
+        return package
+
+    def unpack(self, package):
+        super().unpack(package)
+        
+        self.bias_volts = package.get('bias_volts', 1.5)
+        self.bias_ohms = package.get('bias_ohms', 10000)
+        
+        return

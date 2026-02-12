@@ -1,14 +1,13 @@
 import sys
 import datetime
 
-#import smbus3 as smbus
 import tomli
 
 from . import shell
 from . import procedure
 from . import sensor
 
-class Deploy():
+class xDeploy():
     def __init__(self, streams, *kwargs):
         super().__init__(*kwargs)
 
@@ -32,6 +31,80 @@ class Deploy():
         self.unpack(package)
         
         return
+
+class Deploy():
+    def __init__(self):
+        self.sensors = None
+
+        return
+
+    def load(self, filename=None):
+        config = ConfigFile()        
+        filename = config.get_filename()
+        package = config.load(filename)
+        self.unpack(package)
+
+        return
+    
+    def connect(self, streams):
+        for sensor in self.sensors.values():
+            stream = streams[sensor.stream_type]() # create a new stream instance
+            sensor.connect(stream)
+
+        return
+
+    def unpack(self, package):
+        if 'sensors' in package:
+            self.sensors = sensor.Sensors(package['sensors'])
+
+        return
+
+
+class ConfigFile():
+    def __init__(self):
+        self.suffix = '.toml'
+        self.filename = 'coefficients{}'.format(self.suffix)
+
+        return
+
+    def load(self, filename=None):
+        if filename is None:
+            filename = self.filename
+            
+        package = ''
+        with open(filename, 'rb') as fp:
+            package = tomli.load(fp)
+            print(' calibration data loaded from {}.'.format(filename))
+
+        return package
+
+    def save(self, package, filename=None):
+        if filename is None:
+            filename = self.filename
+
+        with open(filename, 'w') as fp:
+            fp.write(package)
+            print(' calibration data saved to {}.'.format(filename))
+            
+        self.filename = filename
+
+        return
+
+    def get_filename(self):
+        new_name = input('enter filename without suffix ({}): '.format(self.filename))
+
+        # https://stackoverflow.com/a/7406369
+        keepcharacters = ('.','_')
+        new_name = ''.join(c for c in new_name if c.isalnum() or c in keepcharacters).rstrip()
+
+        filename = self.filename
+        if len(new_name) > 0:
+            filename = new_name
+
+        if not filename.endswith(self.suffix):
+            filename = filename + self.suffix
+
+        return filename
     
     
 class Shell(shell.Shell):
@@ -43,9 +116,6 @@ class Shell(shell.Shell):
 
         self.procedures = procedure.Procedures(procedures)
         self.sensors = sensor.SensorsShell(self.procedures)
-
-        self.suffix = '.toml'
-        self.filename = 'coefficients{}'.format(self.suffix)
 
         self.prompt = '{}'.format(self.cyan(self.prompt))
 
@@ -70,37 +140,31 @@ class Shell(shell.Shell):
 
     def do_dump(self, arg):
         ''' view sensor configuration'''
-
         package = self.pack()
-
         print(package)
         
         return
     
     def do_save(self, arg):
         ''' save sensor configuration file'''
-
-        package = self.pack()
-
-        filename = self.get_filename()
+        config = ConfigFile()
         
+        filename = config.get_filename()        
         print(' Saving sensor data to {}'.format(filename))
-        with open(filename, 'w') as fp:
-            fp.write(package)
-
-        print(' calibration data saved to {}.'.format(filename))
-        self.filename = filename
         
+        package = self.pack()
+        config.save(package, filename)
+
         return
 
     def do_load(self, arg):
         ''' load sensor configuration file'''
-
-        filename = self.get_filename()
-        package = ''
+        config = ConfigFile()
+        
+        filename = config.get_filename()
         print(' Loading sensor data from {}'.format(filename))
-        with open(filename, 'rb') as fp:
-            package = tomli.load(fp)
+        
+        package = config.load(filename)
 
         self.unpack(package)
         
@@ -112,22 +176,6 @@ class Shell(shell.Shell):
 
         return True
 
-    def get_filename(self):
-        new_name = input('enter filename without suffix ({}): '.format(self.filename))
-
-        # https://stackoverflow.com/a/7406369
-        keepcharacters = ('.','_')
-        new_name = ''.join(c for c in new_name if c.isalnum() or c in keepcharacters).rstrip()
-
-        filename = self.filename
-        if len(new_name) > 0:
-            filename = new_name
-
-        if not filename.endswith(self.suffix):
-            filename = filename + self.suffix
-
-        return filename
-    
     def pack(self):
         package = 'date = {}\n'.format(datetime.datetime.now())        
 
@@ -150,7 +198,7 @@ class Shell(shell.Shell):
 
         return
     
-    
+
 if __name__ == '__main__':
     
     with smbus.SMBus(1) as bus:
