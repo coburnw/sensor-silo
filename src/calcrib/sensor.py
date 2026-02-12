@@ -139,7 +139,7 @@ class Sensor():
 
 
 class SensorShell(shell.Shell):
-    intro = 'Sensor Configuration.  Blank line to return to previous menu.'
+    intro = 'Sensor Configuration.  x to return to previous menu.'
     # prompt = 'sensor: '
 
     def __init__(self, sensor, procedure, *kwargs):
@@ -160,10 +160,12 @@ class SensorShell(shell.Shell):
     
     @property
     def prompt(self):
+        item =  self.red(self.id)
+        
         if self.sensor.calibration.is_valid:
-            prompt = '{} {}: '.format(self.cyan('edit'), self.green(self.id))
-        else:
-            prompt = '{} {}: '.format(self.cyan('edit'), self.red(self.id))
+            item = self.green(self.id)
+            
+        prompt = '{} ({}): '.format(self.cyan('edit sensor'), item)
             
         return prompt
 
@@ -173,6 +175,10 @@ class SensorShell(shell.Shell):
         return False
     
     def emptyline(self):
+        return False
+    
+    def do_x(self, arg):
+        ''' exit to previous menu'''
         return True
     
     def do_show(self, arg=None):
@@ -280,7 +286,7 @@ class SensorShell(shell.Shell):
 class Sensors(collections.UserDict):
     def __init__(self, package=None):
         super().__init__()
-        # self.data contains our dict()
+        ### self.data contains our dict()
 
         if package is not None:
             self.unpack(package)
@@ -368,8 +374,12 @@ class SensorsShell(shell.Shell):
         id = id.strip().lower().replace(' ', '_')
         
         return id
-    
+
     def emptyline(self):
+        return False
+    
+    def do_x(self, arg):
+        ''' exit to previous menu'''
         return True
 
     def do_new(self, sensor_id=''):
@@ -385,7 +395,7 @@ class SensorsShell(shell.Shell):
             print(' sensor already exists.')
             return
                
-        sensor_type = input(' Enter sensor type [{}] :'.format(self.types)).strip()
+        sensor_type = input(' Enter sensor type {}: '.format(self.types)).strip()
         if len(sensor_type) == 0:
             print(' missing sensor type.  known types are {}.'.format(self.types))
             return
@@ -395,8 +405,7 @@ class SensorsShell(shell.Shell):
             return
 
         sensor = self.new_sensor(sensor_type, sensor_key)
-        #sensor_shell = SensorShell(sensor, self.procedure)
-        #sensor_shell.do_show()
+
         self.do_edit('')
         
         return
@@ -446,22 +455,27 @@ class SensorsShell(shell.Shell):
             print(' No sensors in list.  "new" to add a sensor.')
             return
         
+        print('   ID\tType\tAddr\t  Expires\tName\tLocation')
         i = 0
+        
         for sensor in self.sensors.values():
             carret = ' '
             if i == self.sensor_index:
                 carret = '*'
+
+            i += 1               
 
             id = self.red(sensor.id)
             if sensor.calibration.is_valid:
                 id = self.green(sensor.id)
 
             type = sensor.type
-            address = sensor.address
+            name = sensor.name
+            addr = sensor.address
+            location = sensor.location
             due_date = sensor.calibration.due_date
             
-            i += 1               
-            print(' {} {} {} {} {}'.format(carret, id, type, address, due_date))
+            print(' {} {}\t{}\t{}\t{}\t{}\t{}'.format(carret, id, type, addr, due_date, name, location ))
         
         return
 

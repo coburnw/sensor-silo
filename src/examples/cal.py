@@ -83,9 +83,8 @@ class PhorpStream(calcrib.Stream):
         return 'mV'
     
     
-class ThermistorProcedure(calcrib.ThermistorProcedure):
-    intro = 'Thermistor Configuration'
-    prompt = 'edit(Therm): '
+class ThermistorProcedure(calcrib.NtcBetaProcedure):
+    intro = 'Beta Thermistor Configuration'
     
     def __init__(self, streams, *kwargs):
         super().__init__(streams, *kwargs)
@@ -93,9 +92,9 @@ class ThermistorProcedure(calcrib.ThermistorProcedure):
         self.stream_type = 'PhorpStream'
         self.stream_address = 'a1'
         
-        self.type = 'therm'
-        self.name = 'Thermistor'
-        self.scaled_units = 'deg C'
+        self.type = 'ntc'
+        self.name = 't1'
+        self.scaled_units = 'degC'
 
         # the default setpoint settings.
         self.parameters['beta'] = calcrib.Constant('beta', 'K', 3574.6)
@@ -109,9 +108,8 @@ class ThermistorProcedure(calcrib.ThermistorProcedure):
         return
 
     
-class EhProcedure(calcrib.PolynomialProcedure):
-    intro = 'Eh Procedure Configuration'
-    prompt = 'edit(Eh): '
+class OrpProcedure(calcrib.PolynomialProcedure):
+    intro = 'ORP Procedure Configuration'
     
     def __init__(self, streams, *kwargs):
         super().__init__(streams, *kwargs)
@@ -119,13 +117,13 @@ class EhProcedure(calcrib.PolynomialProcedure):
         self.stream_type = 'PhorpStream'
         self.stream_address = 'a2'
         
-        self.type = 'eh'
-        self.name = 'Eh'
-        self.units = 'mV'
+        self.type = 'orp'
+        self.name = 'eh1'
+        self.scaled_units = 'mV'
 
         # the default setpoint settings.
-        self.parameters['p1'] = calcrib.Setpoint('p1', self.units, 0.0)
-        self.parameters['p2'] = calcrib.Setpoint('p2', self.units, 225)
+        self.parameters['p1'] = calcrib.Setpoint('p1', self.scaled_units, 0.0)
+        self.parameters['p2'] = calcrib.Setpoint('p2', self.scaled_units, 225)
 
         return
 
@@ -137,7 +135,6 @@ class EhProcedure(calcrib.PolynomialProcedure):
     
 class PhProcedure(calcrib.PolynomialProcedure):
     intro = 'pH Procedure Configuration'
-    prompt = 'edit(pH): '
 
     def __init__(self, streams, *kwargs):
         super().__init__(streams, *kwargs)
@@ -146,7 +143,7 @@ class PhProcedure(calcrib.PolynomialProcedure):
         self.stream_address = 'a2'
         
         self.type = 'ph'
-        self.name = 'pH'
+        self.name = 'ph1'
         self.scaled_units = 'pH'
 
         # the default setpoint settings.
@@ -184,10 +181,10 @@ if __name__ == '__main__':
         if config == True:
             procedures = dict()
             procedures['ph'] = PhProcedure(streams)
-            procedures['eh'] = EhProcedure(streams)
-            procedures['therm'] = ThermistorProcedure(streams)
+            procedures['orp'] = OrpProcedure(streams)
+            procedures['ntc'] = ThermistorProcedure(streams)
 
-            shell = calcrib.Shell(procedures)
+            shell = calcrib.Shell(procedures) #instantiate first then append procedures?
             shell.cmdloop()
         else:
             # load toml file, initialize sensors, and run

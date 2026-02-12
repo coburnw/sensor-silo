@@ -8,10 +8,10 @@ class EquationFactory():
 
     def new(self, package):
         # print('creating new {}'.format(package['type']))
-        if package['type'] == 'BetaThermistorEquation':
-            equation = thermistor.BetaThermistorEquation(package)
-        elif package['type'] == 'PhorpThermistorEquation':
-            equation = thermistor.PhorpThermistorEquation(package)
+        if package['type'] == 'NtcBetaEquation':
+            equation = thermistor.NtcBetaEquation(package)
+        elif package['type'] == 'PhorpNtcBetaEquation':
+            equation = thermistor.PhorpNtcBetaEquation(package)
         elif package['type'] == 'PolynomialEquation':
             equation = polynomial.PolynomialEquation(package)
 

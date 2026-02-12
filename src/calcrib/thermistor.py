@@ -4,7 +4,7 @@ from . import parameter
 from . import procedure
 from . import equation
 
-class ThermistorProcedure(procedure.ProcedureShell):
+class NtcBetaProcedure(procedure.ProcedureShell):
     def __init__(self, streams, *kwargs):
         super().__init__(streams, *kwargs)
 
@@ -53,7 +53,7 @@ class ThermistorProcedure(procedure.ProcedureShell):
 
     def prep(self, sensor):
         if sensor.calibration.equation is None:
-            sensor.calibration.equation = PhorpThermistorEquation()
+            sensor.calibration.equation = PhorpNtcBetaEquation()
             
         sensor.calibration.equation.beta = self.parameters['beta'].scaled_value
         sensor.calibration.equation.r25 = self.parameters['r25'].scaled_value
@@ -90,7 +90,7 @@ class ThermistorProcedure(procedure.ProcedureShell):
         return
 
     
-class BetaThermistorEquation(equation.Equation):
+class NtcBetaEquation(equation.Equation):
     def __init__(self, package=None):
         super().__init__()
 
@@ -139,7 +139,7 @@ class BetaThermistorEquation(equation.Equation):
         
         return
     
-class PhorpThermistorEquation(BetaThermistorEquation):
+class PhorpNtcBetaEquation(NtcBetaEquation):
     def __init__(self, package=None):
         super().__init__()
 
@@ -149,8 +149,6 @@ class PhorpThermistorEquation(BetaThermistorEquation):
         if package:
             self.unpack(package)
         
-        print('PhorpThermistorEquation done')
-            
         return
 
     def evaluate_y(self, ntc_millivolts):  # target_units

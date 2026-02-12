@@ -5,7 +5,6 @@ from . import setpoint as sp
 
 class ProcedureShell(shell.Shell):
     intro = 'Generic Procedure Configuration'
-    prompt = 'edit(?): '
 
     def __init__(self, streams, *kwargs):
         super().__init__(*kwargs)
@@ -19,9 +18,13 @@ class ProcedureShell(shell.Shell):
         self.scaled_units = None
         self.interval = datetime.timedelta(days=180)
 
-        self.prompt = '{}'.format(self.cyan(self.prompt))
 
         return
+
+    @property
+    def prompt(self):
+        text = 'edit procedure ({})'.format(self.type)
+        return '{}: '.format(self.cyan(text))
     
     def preloop(self):
         self.do_show()
@@ -29,6 +32,12 @@ class ProcedureShell(shell.Shell):
         return
 
     def emptyline(self):
+        self.do_show()
+        
+        return False
+    
+    def do_x(self, arg):
+        ''' exit to previous menu'''
         return True
     
     def do_show(self, arg=None):
@@ -77,6 +86,7 @@ class ProcedureShell(shell.Shell):
     def prep(self, sensor):
         sensor.name = self.name
 
+        sensor.calibration.type = self.__class__.__name__
         sensor.calibration.scaled_units = self.scaled_units
         sensor.calibration.interval = self.interval
 
@@ -143,6 +153,10 @@ class Procedures(shell.Shell):
         return
 
     def emptyline(self):
+        return False
+    
+    def do_x(self, arg):
+        ''' exit to previous menu'''
         return True
     
     def do_ph(self, arg):
@@ -151,15 +165,21 @@ class Procedures(shell.Shell):
 
         return False
 
-    def do_eh(self, arg):
+    def do_orp(self, arg):
         ''' ph<cr> edit Eh procedure default parameters''' 
-        self.procedures['eh'].cmdloop()
+        self.procedures['orp'].cmdloop()
 
         return False
 
-    def do_therm(self, arg):
+    def do_ntc(self, arg):
         ''' ph<cr> edit Eh procedure default parameters''' 
-        self.procedures['therm'].cmdloop()
+        self.procedures['ntc'].cmdloop()
+
+        return False
+
+    def do_do(self, arg):
+        ''' ph<cr> edit Eh procedure default parameters''' 
+        self.procedures['do'].cmdloop()
 
         return False
 

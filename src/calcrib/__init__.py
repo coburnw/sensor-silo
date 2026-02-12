@@ -7,4 +7,4 @@ from .parameter import Constant
 
 from .polynomial import PolynomialEquation
 from .polynomial import PolynomialProcedure
-from .thermistor import ThermistorProcedure
+from .thermistor import NtcBetaProcedure

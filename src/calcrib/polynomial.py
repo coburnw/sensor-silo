@@ -150,8 +150,8 @@ class PolynomialEquation(equation.Equation):
         
         self.degree = 1
         self.coefficients = dict()
-        self.coefficients['slope'] = 1.0
-        self.coefficients['offset'] = 0.0
+        self.coefficients[0] = 0.0
+        self.coefficients[1] = 1.0
 
         if package:
             self.unpack(package)
@@ -166,27 +166,27 @@ class PolynomialEquation(equation.Equation):
 
         is_valid = False
         try:
-            self.coefficients['slope'] = (y2 - y1) / (x2 - x1)
-            self.coefficients['offset'] = y1 - self.coefficients['slope'] * x1
+            self.coefficients[1] = (y2 - y1) / (x2 - x1)
+            self.coefficients[0] = y1 - self.coefficients[1] * x1
             
             is_valid = True
         except ZeroDivisionError:
-            self.coefficients['slope'] = 0.00001
-            self.coefficients['offset'] = 0.0
+            self.coefficients[1] = 0.00001
+            self.coefficients[0] = 0.0
             
         return is_valid
 
     def evaluate_x(self, x_value):
-        y = self.coefficients['slope'] * x_value + self.coefficients['offset']
+        y = self.coefficients[1] * x_value + self.coefficients[0]
         
         return y
 
     def evaluate_y(self, y_value):
-        slope = self.coefficients['slope']
+        slope = self.coefficients[1]
         if slope == 0:
             slope = 0.00001
-            
-        x = (y_value - self.coefficients['offset']) / slope
+
+        x = (y_value - self.coefficients[0]) / slope
         
         return x
     
@@ -209,12 +209,11 @@ class PolynomialEquation(equation.Equation):
 
     def unpack(self, package):
         super().unpack(package)
-
+        
         self.degree = package['degree']
         
         for name, value in package['coefficients'].items():
-            print(name, value)
-            self.coefficients[name] = value
+            self.coefficients[int(name)] = value
         
         return
 

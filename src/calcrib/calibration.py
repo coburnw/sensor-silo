@@ -9,6 +9,7 @@ class Calibration():
 
         self.scaled_units = ''
 
+        self.type = None
         self.equation = None
         
         if package:
@@ -44,6 +45,7 @@ class Calibration():
     def pack(self, prefix):
         package = ''
         package += '[{}]\n'.format(prefix)
+        package += 'type = "{}"\n'.format(self.type)
         package += 'scaled_units = "{}"\n'.format(self.scaled_units)
         package += 'timestamp = "{}"\n'.format(self.timestamp.isoformat())
         package += 'interval = "{}"\n'.format(self.interval.days)
@@ -55,7 +57,8 @@ class Calibration():
         return package
     
     def unpack(self, package):
-        ### self.type = package['type'] dont override instantiated value!
+        self.type = package['type'] # perhaps dont override instantiated value?
+        
         self.scaled_units = package['scaled_units']
         self.timestamp = datetime.date.fromisoformat(package['timestamp'])
         self.interval = datetime.timedelta(days=int(package['interval']))
