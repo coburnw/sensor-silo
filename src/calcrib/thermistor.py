@@ -33,7 +33,7 @@ class NtcBetaProcedure(procedure.ProcedureShell):
         return False
         
     def do_r25(self, arg):
-        ''' r25 <n> The thermistors resistance in ohms at 25 Celsius'''
+        ''' r25 <n> The thermistors defined resistance in ohms at 25 Celsius'''
         
         try:
             self.r25.scaled_value = float(arg)

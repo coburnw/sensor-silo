@@ -27,12 +27,12 @@ class ProcedureShell(shell.Shell):
         return '{}: '.format(self.cyan(text))
     
     def preloop(self):
-        self.do_show()
+        self.do_show(None)
 
         return
 
     def emptyline(self):
-        self.do_show()
+        self.do_show(None)
         
         return False
     
@@ -43,10 +43,10 @@ class ProcedureShell(shell.Shell):
     def do_show(self, arg=None):
         ''' print present values'''
         
-        print(' Configuration')
-        print('  Stream Type :  {}'.format(self.stream_type))
-        print('  Stream Address:  {}'.format(self.stream_address))
+        print('  Stream Type : {}'.format(self.stream_type))
+        print('  Stream Address: {}'.format(self.stream_address))
         print()
+        print('  Property: {}'.format(self.property))
         self.show()
         
         print('  Interval: {} days'.format(self.interval.days))
@@ -64,7 +64,7 @@ class ProcedureShell(shell.Shell):
         else:
             print(' invalid address. board_id is a-g, channel_id is 1-4')
 
-        self.do_show()
+        self.do_show(None)
         
         return
     
@@ -79,13 +79,15 @@ class ProcedureShell(shell.Shell):
             
         self.interval = datetime.timedelta(days=int(days))
 
-        self.do_show()
+        self.do_show(None)
         
         return False
 
     def prep(self, sensor):
-        sensor.name = self.name
-
+        #sensor.name = self.name
+        sensor.name = '{}1'.format(self.type)
+        sensor.property = self.property
+        
         sensor.calibration.type = self.__class__.__name__
         sensor.calibration.scaled_units = self.scaled_units
         sensor.calibration.interval = self.interval
@@ -153,6 +155,8 @@ class Procedures(shell.Shell):
         return
 
     def emptyline(self):
+        self.do_help(None)
+        
         return False
     
     def do_x(self, arg):

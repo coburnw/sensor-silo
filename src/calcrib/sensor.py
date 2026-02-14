@@ -58,12 +58,16 @@ class Sensor():
         if address is None:
             address = self.address
 
-        if address == 'ND':
+        if address.lower() == 'nd':
             print(' Sensor.connect(): NO DEPLOYED ADDRESS')
         else:
             self.stream.connect(address)
         
         return
+
+    @property
+    def is_deployed(self):
+        return self.address.lower() != 'nd'
     
     @property
     def raw_value(self):
@@ -97,6 +101,7 @@ class Sensor():
 
         package += 'name = "{}"\n'.format(self.name)
         package += 'location = "{}"\n'.format(self.location)
+        package += 'property = "{}"\n'.format(self.property)
 
         package += 'stream_type = "{}"\n'.format(self.stream_type)
         package += 'address = "{}"\n'.format(self.address)
@@ -122,6 +127,8 @@ class Sensor():
 
         self.name = package.get('name', '')
         self.location = package.get('location', '')
+        self.property = package.get('property', '')
+        
         self.stream_type = package.get('stream_type')
         self.address = package.get('address', 'ND')
 
@@ -175,6 +182,8 @@ class SensorShell(shell.Shell):
         return False
     
     def emptyline(self):
+        self.do_show()
+        
         return False
     
     def do_x(self, arg):
@@ -185,23 +194,24 @@ class SensorShell(shell.Shell):
         ''' print sensors parameters'''
         print(' ID:   {}'.format(self.id))
         print('  Type: {}'.format(self.sensor.type))
+        print('  Property: {}'.format(self.sensor.property))
         print('  Name: {}'.format(self.sensor.name))
         print('  Location: {}'.format(self.sensor.location))
 
         print('  Stream Type:  {}'.format(self.sensor.stream.type))
-        print('  Deployed Address: {}'.format(self.sensor.address)) # deployed address
+        print('  Deployed Address: {}'.format(self.sensor.address))
         print('  calibration due:  {}'.format(self.sensor.calibration.due_date))
         
         return False
 
     def do_address(self, arg=None):
-        ''' address <addr> enter deployed pHorp address of sensor'''
+        ''' address <addr> enter deployed pHorp address of sensor, or ND for Not Deployed'''
 
         err_str = self.sensor.stream.validate_address(arg)
         if err_str:
             print(self.red(err_str))
         else:
-            self.sensor.address = self.sensor.stream.address
+            self.sensor.address = arg.strip().upper() #self.sensor.stream.address
             
         self.do_show()
         
@@ -235,14 +245,12 @@ class SensorShell(shell.Shell):
         ''' meas <mV> Evaluates mV in engineering units, sensor value if blank.'''
         if len(arg.strip()) == 0:
             self.meas(arg)
-            #SensorShell(self.sensor).meas(arg)
         else:
             self.eval(arg)
-            #SensorShell(self.sensor).eval(arg)
         
         return False
 
-    def do_quality(self, arg):
+    def do_qual(self, arg):
         ''' evaluate sensor quality '''
         self.procedure.quality(self.sensor)
         
@@ -256,11 +264,14 @@ class SensorShell(shell.Shell):
     def meas(self, arg):
         ''' sensor measurement in engineering units'''
         self.sensor.update()
-        
+
+        addr = self.sensor.stream.address
+        raw = '{} {}'.format(round(self.sensor.raw_value, 3), self.sensor.raw_units)
         if self.sensor.calibration.is_valid:
-            print(' {} {}: {} {}'.format(round(self.sensor.raw_value, 3), self.sensor.raw_units, round(self.sensor.scaled_value, 3), self.sensor.scaled_units))
+            scaled = '{} {}'.format(round(self.sensor.scaled_value, 3), self.sensor.scaled_units)
+            print('{}: {}, {}'.format(addr, raw, scaled))
         else:
-            print(' uncalibrated: {} {}'.format(round(self.sensor.raw_value, 3), self.sensor.raw_units))
+            print('uncalibrated {}: {}'.format(addr, raw))
             
         return
     
@@ -275,10 +286,12 @@ class SensorShell(shell.Shell):
         except:
             raw_value = 0
 
+        raw = '{} {}'.format(round(raw_value, 3), self.sensor.raw_units)
         if self.sensor.calibration.is_valid:
-            print(' {} {}: {} {}'.format(round(raw_value,3), self.sensor.raw_units, round(self.sensor.evaluate(raw_value), 3), self.sensor.scaled_units))
+            scaled = '{} {}'.format(round(self.sensor.evaluate(raw_value), 3), self.sensor.scaled_units)
+            print(' {}: {}'.format(raw, scaled))
         else:
-            print(' uncalibrated: {} {}'.format(round(raw_value,3), self.sensor.raw_units))
+            print(' uncalibrated: {}'.format(raw))
 
         return False        
     
@@ -318,7 +331,7 @@ class Sensors(collections.UserDict):
 
     
 class SensorsShell(shell.Shell):
-    intro = 'Sensor Database, blank line to return to previous menu...'
+    intro = 'Sensor Database, x to return to previous menu...'
 
     def __init__(self, procedures, *kwargs):
         super().__init__(*kwargs)
@@ -376,6 +389,8 @@ class SensorsShell(shell.Shell):
         return id
 
     def emptyline(self):
+        self.do_list(None)
+        
         return False
     
     def do_x(self, arg):

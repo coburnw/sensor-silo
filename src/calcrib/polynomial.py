@@ -25,20 +25,20 @@ class PolynomialProcedure(procedure.ProcedureShell):
     def p3(self):
         return self.parameters['p3']
         
-    def do_spread(self, arg):
-        ''' spread <n> Calibration point count, 2 or 3'''
+    # def do_spread(self, arg):
+    #     ''' spread <n> Calibration point count, 2 or 3'''
         
-        try:
-            if int(arg) not in [2,3]:
-                print(' possible point count is {}'.format([2,3]))
-            else:
-                self.point_count = int(arg)
-        except:
-            print(' possible choices are 2 or 3')
+    #     try:
+    #         if int(arg) > len(self.parameters): # not in [2,3]:
+    #             print(' possible point count is {}'.format([2,3]))
+    #         else:
+    #             self.point_count = int(arg)
+    #     except:
+    #         print(' possible choices are 2 or 3')
             
-        self.do_show()
+    #     self.do_show()
         
-        return False
+    #     return False
 
     def do_p1(self, arg):
         ''' p1 <n> The first (lowest value) in a two or three point calibration'''

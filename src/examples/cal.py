@@ -48,9 +48,13 @@ class PhorpStream(calcrib.Stream):
         board, chan_idx = self.split_address(address)
         
         if board in 'abcdefg' and chan_idx in '1234':
-            self.address = board + chan_idx
+            #self.address = board + chan_idx
+            pass
+        elif address.strip().lower() == 'nd':
+            #self.address = address.strip().upper()
+            pass
         else:
-            return' invalid address. board_id is a-g, channel_id is 1-4 as in "b3"'
+            return 'invalid address. board_id is a-g, channel_id is 1-4 as in "b3"'
 
         return
         
@@ -93,12 +97,39 @@ class ThermistorProcedure(calcrib.NtcBetaProcedure):
         self.stream_address = 'a1'
         
         self.type = 'ntc'
-        self.name = 't1'
+
+        self.property = 'Temperature'
         self.scaled_units = 'degC'
 
         # the default setpoint settings.
         self.parameters['beta'] = calcrib.Constant('beta', 'K', 3574.6)
         self.parameters['r25'] = calcrib.Constant('r25', 'Ohms', 10000)
+
+        return
+
+    def quality(self, sensor):
+        print(' Not implemented ')
+
+        return
+
+    
+class DoProcedure(calcrib.PolynomialProcedure):
+    intro = 'Dissolved Oxygen Procedure Configuration'
+    
+    def __init__(self, streams, *kwargs):
+        super().__init__(streams, *kwargs)
+        
+        self.stream_type = 'PhorpStream'
+        self.stream_address = 'a2'
+        
+        self.type = 'do'
+
+        self.property = 'Dissolved Oxygen'
+        self.scaled_units = 'mg/L'
+
+        # the default setpoint settings.
+        self.parameters['p1'] = calcrib.Setpoint('p1', self.scaled_units, 0.0)
+        self.parameters['p2'] = calcrib.Setpoint('p2', self.scaled_units, 9.09)
 
         return
 
@@ -118,7 +149,8 @@ class OrpProcedure(calcrib.PolynomialProcedure):
         self.stream_address = 'a2'
         
         self.type = 'orp'
-        self.name = 'eh1'
+
+        self.property = 'Eh'
         self.scaled_units = 'mV'
 
         # the default setpoint settings.
@@ -143,7 +175,8 @@ class PhProcedure(calcrib.PolynomialProcedure):
         self.stream_address = 'a2'
         
         self.type = 'ph'
-        self.name = 'ph1'
+
+        self.property = 'pH'
         self.scaled_units = 'pH'
 
         # the default setpoint settings.
@@ -180,6 +213,7 @@ if __name__ == '__main__':
     
         if config == True:
             procedures = dict()
+            procedures['do'] = DoProcedure(streams)
             procedures['ph'] = PhProcedure(streams)
             procedures['orp'] = OrpProcedure(streams)
             procedures['ntc'] = ThermistorProcedure(streams)
@@ -193,12 +227,13 @@ if __name__ == '__main__':
             project.connect(streams)
             while True:
                 for sensor in project.sensors.values():
-                    sensor.update()
-                    val = round(sensor.scaled_value, 1)
-                    parm = '{} {} {}, '.format(sensor.name, val, sensor.scaled_units)
-                    print(parm, end='')
-                    # sys.stdout.flush()
-                    time.sleep(0.5)
+                    if sensor.is_deployed:
+                        sensor.update()
+                        val = round(sensor.scaled_value, 1)
+                        parm = '{} {} {}, '.format(sensor.name, val, sensor.scaled_units)
+                        print(parm, end='')
+                        # sys.stdout.flush()
+                        time.sleep(0.5)
 
                 print('')
             
