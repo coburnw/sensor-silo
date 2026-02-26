@@ -20,7 +20,6 @@ import time
 
 import smbus3 as smbus
 import phorp
-import frame_streams as fs
 
 import sensor_silo as silo
 
