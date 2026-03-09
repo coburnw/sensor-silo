@@ -74,7 +74,8 @@ class Sensor():
             address = self.address
 
         if address.lower() == 'nd':
-            print(' Sensor.connect(): NO DEPLOYED ADDRESS')
+            # print(' Sensor.connect(): NO DEPLOYED ADDRESS')
+            pass
         else:
             self.stream.connect(address)
         

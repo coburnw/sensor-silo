@@ -25,30 +25,6 @@ from . import procedure
 from . import sensor
 from . import deploy
 
-class xDeploy():
-    def __init__(self, streams, *kwargs):
-        super().__init__(*kwargs)
-
-        self.deployment = deployment.Deployment(streams)
-        self.sensors = sensor.Sensors(self.deployment)
-
-        self.suffix = '.toml'
-        self.filename = 'coefficients{}'.format(self.suffix)
-
-        return
-
-    def load(self):
-        ''' load sensor configuration file'''
-
-        filename = self.get_filename()
-        package = ''
-        print(' Loading sensor data from {}'.format(filename))
-        with open(filename, 'rb') as fp:
-            package = tomli.load(fp)
-
-        self.unpack(package)
-        
-        return
 
 class Deploy():
     def __init__(self, filename=None):
@@ -102,8 +78,12 @@ class Deploy():
     
     def connect(self, streams):
         for sensor in self.sensors.values():
-            stream = streams[sensor.stream_type]() # create a new hardware stream instance
-            sensor.connect(stream)
+            if sensor.address.lower() == 'nd':
+                # print(' Sensor.connect(): NO DEPLOYED ADDRESS')
+                pass
+            else:
+                stream = streams[sensor.stream_type]() # create a new hardware stream instance
+                sensor.connect(stream)
 
         return
 
