@@ -16,13 +16,26 @@
 #
 
 class Equation():
-    def __init__(self):
+    ''' an equation base class'''
+    def __init__(self, package=None):
         self.package_prefix = ''
+
+        if package:
+            self.unpack(package)
+            
         return
 
     @property
     def type(self):
         return self.__class__.__name__
+
+    def evaluate_y(self, y_value):
+        ''' convert a raw y_value to a scaled x_value, typically over-ridden'''
+        raise NotImplemented
+    
+    def evaluate_x(self, x_value):
+        ''' convert a scaled x_value to a raw y_value, typically over-ridden'''
+        raise NotImplemented
     
     def dump(self):
         print(self.pack('me'))
@@ -39,4 +52,24 @@ class Equation():
     def unpack(self, package):
         # nothing for us to unpack?
         return
+    
+class IdentityEquation(Equation):
+    ''' multiplies by one, subtracts 0 '''
+    def __init__(self, package=None):
+        super().__init__(package)
+        
+        return
+
+    def evaluate_y(self, y_value):
+        ''' convert a raw y_value to a scaled x_value, typically over-ridden'''
+        x_value = y_value
+        
+        return x_value
+
+    def evaluate_x(self, x_value):
+        ''' convert a scaled x_value to a raw y_value, typically over-ridden'''
+        y_value = x_value
+        
+        return y_value
+    
     

@@ -18,6 +18,7 @@
 import datetime
 
 from . import shell
+from . import equation
 
 class ProcedureShell(shell.Shell):
     intro = 'Generic Procedure Configuration'
@@ -106,7 +107,6 @@ class ProcedureShell(shell.Shell):
         return False
 
     def prep(self, sensor):
-        from . import calibration # circular reference
 
         if sensor.kind is None:
             # initialize a new sensor
@@ -115,6 +115,8 @@ class ProcedureShell(shell.Shell):
             sensor.property = self.property
 
         if sensor.calibration is None:
+            from . import calibration # circular reference
+            
             sensor.calibration = calibration.Calibration()
             sensor.calibration.procedure_type = self.type
             sensor.calibration.scaled_units = self.scaled_units
@@ -147,8 +149,8 @@ class ProcedureShell(shell.Shell):
         ''' specialized evaluation of sensor calibration constants'''
         raise NotImplemented
     
-    def save(self, sensor):
-        ''' specialized save/use of sensor calibration constatns'''
+    def save(self, sensor): # poor name choice for function that calculates the factors/coeffcients
+        ''' specialized save/use of sensor calibration constants'''
         raise NotImplemented
     
     def pack(self, prefix):
@@ -177,6 +179,43 @@ class ProcedureShell(shell.Shell):
         return
         
     
+class NullProcedure(ProcedureShell):
+    def do_address(self, arg=None):
+        ''' address <addr> change address of phorp channel used by procedure'''
+        address = arg.strip().lower()
+        
+        stream = self.streams[self.stream_type]() # create a new stream instance
+        err_str = stream.validate_address(address)
+        
+        if not err_str:
+            self.stream_address = address
+        else:
+            print(err_str)
+            
+        self.do_show(None)
+        
+        return
+    
+    def show(self):
+        return
+
+    def prep(self, sensor):
+        super().prep(sensor)
+
+        if sensor.calibration.equation is None:
+            sensor.calibration.equation = equation.IdentityEquation()
+                    
+        return
+
+    def evaluate(self, sensor):
+        ''' specialized evaluation of sensor calibration constants'''
+        return True
+    
+    def save(self, sensor):
+        ''' specialized save/use of sensor calibration constants'''
+        return True
+    
+
 class Procedures(shell.Shell):
     intro = 'Sensor calibration procedures. ? for help.'
     prompt = 'procedures: '
@@ -231,6 +270,12 @@ class Procedures(shell.Shell):
     def do_do(self, arg):
         ''' ph<cr> edit Eh procedure default parameters''' 
         self.procedures['do'].cmdloop()
+
+        return False
+
+    def do_co2(self, arg):
+        ''' ph<cr> edit CO2 procedure default parameters''' 
+        self.procedures['co2'].cmdloop()
 
         return False
 

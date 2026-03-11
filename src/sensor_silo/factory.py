@@ -15,6 +15,7 @@
 # GNU Affero General Public License for more details.
 #
 
+from . import equation
 from . import thermistor
 from . import polynomial
 
@@ -23,12 +24,17 @@ class EquationFactory():
         return
 
     def new(self, package):
-        # print('creating new {}'.format(package['type']))
-        if package['type'] == 'NtcBetaEquation':
-            equation = thermistor.NtcBetaEquation(package)
-        elif package['type'] == 'PhorpNtcBetaEquation':
-            equation = thermistor.PhorpNtcBetaEquation(package)
-        elif package['type'] == 'PolynomialEquation':
-            equation = polynomial.PolynomialEquation(package)
+        equ = None
 
-        return equation
+        if package['type'] == 'IdentityEquation':
+            equ = equation.IdentityEquation(package)
+        elif package['type'] == 'NtcBetaEquation':
+            equ = thermistor.NtcBetaEquation(package)
+        elif package['type'] == 'PhorpNtcBetaEquation':
+            equ = thermistor.PhorpNtcBetaEquation(package)
+        elif package['type'] == 'PolynomialEquation':
+            equ = polynomial.PolynomialEquation(package)
+        else:
+            print('EquationFactory() unrecognized equation type: {}'.format(package['type']))
+            
+        return equ
