@@ -32,6 +32,10 @@ class DeployShell(shell.Shell):
         self.over_sample_rate = 10 # samples per interval
         self.filter_in_percent = 10 # %
 
+        # default raspberry pi zero i2c ports
+        self.i2c_qwiic = 1
+        self.i2c_stemma = 0
+        
         # self.silo_sensors = sensors
         # self.sensors = [] # deployed sensors
         return
@@ -135,6 +139,23 @@ class DeployShell(shell.Shell):
         
         return False
     
+    def do_stemma(self, arg):
+        ''' stemma [port number] : Set stemma I2C Port, raspberry pi i2c port number (0-2) for 5 Volt Sensors'''
+
+        try:
+            self.i2c_stemma = int(arg)
+        except ValueError:
+            self.i2c_stemma = 0
+        
+        if self.i2c_stemma > 2:
+            self.i2c_stemma = 0
+        elif self.i2c_stemma < 0:
+            self.i2c_stemma = 0
+            
+        self.do_show()
+        
+        return False
+
     def do_show(self, arg=None):
         ''' print sensors parameters'''
         print(' Folder: {}'.format(self.folder_name))
@@ -144,6 +165,7 @@ class DeployShell(shell.Shell):
         print('  Interval: {} minutes'.format(self.update_interval))
         print('  OSR:  {} samples per interval'.format(self.over_sample_rate))
         print('  Filter TC: {}'.format(self.filter_in_percent))
+        print('  Stemma i2c port: {}'.format(self.i2c_stemma))
         
         return False
 
@@ -161,6 +183,8 @@ class DeployShell(shell.Shell):
         package += 'update_interval = {}\n'.format(self.update_interval)
         package += 'over_sample_rate = {}\n'.format(self.over_sample_rate)
         package += 'filter_in_percent = {}\n'.format(self.filter_in_percent)
+        package += 'i2c_stemma = {}\n'.format(self.i2c_stemma)
+        package += 'i2c_qwiic = {}\n'.format(self.i2c_qwiic)
 
         return package
 
@@ -171,8 +195,10 @@ class DeployShell(shell.Shell):
         self.key_name = package.get('key_name', 'key')
         
         self.update_interval = package.get('update_interval', 60)
-        self.over_sample_rate = package.get('over_sample_rag', 10)        
+        self.over_sample_rate = package.get('over_sample_rate', 10)        
         self.filter_in_percent = package.get('filter_in_percent', 0)
+        self.i2c_stemma = package.get('i2c_stemma', 0)
+        self.i2c_qwiic = package.get('i2c_qwiic', 1)
                 
         return
 

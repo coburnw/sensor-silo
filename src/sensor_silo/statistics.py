@@ -4,18 +4,32 @@ class RunningStats:
     # https://stackoverflow.com/a/17637351
     # ultimately from from https://github.com/liyanage/python-modules
 
-    def __init__(self):
+    def __init__(self, max_n=0):
+        ''' limit n to max_n where 0 is unlimited.
+            a confined number of samples acts more like a filter of
+            last n samples'''
+        
+        self.max_n = max_n
+        
         self.n = 0
         self.old_m = 0
         self.new_m = 0
         self.old_s = 0
         self.new_s = 0
 
+        return
+
+    def __str__(self):
+        return 'n={}, mean={}, var={}, sd={}'.format(self.n, round(self.mean(),3), round(self.variance(),3), round(self.standard_deviation(),3))
+    
     def clear(self):
         self.n = 0
 
+        return
+    
     def push(self, x):
-        self.n += 1
+        if self.max_n == 0 or self.n < self.max_n:
+            self.n += 1
 
         if self.n == 1:
             self.old_m = self.new_m = x
@@ -27,6 +41,8 @@ class RunningStats:
             self.old_m = self.new_m
             self.old_s = self.new_s
 
+        return
+    
     def mean(self):
         return self.new_m if self.n else 0.0
 
@@ -36,6 +52,9 @@ class RunningStats:
     def standard_deviation(self):
         return math.sqrt(self.variance())
 
+    def z_score(self, x):
+        return (x - self.mean()) / self.standard_deviation() if self.n > 1 else 5
+    
     @property
     def synopsis(self):
         return 'n={}, mean={}, var={}, sd={}'.format(self.n, self.mean(), self.variance(), self.standard_deviation())

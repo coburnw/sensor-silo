@@ -67,6 +67,14 @@ class Deploy():
             tc = 1
             
         return tc
+
+    @property
+    def i2c_stemma(self):
+        return self.deployment.i2c_stemma
+
+    @property
+    def i2c_qwiic(self):
+        return self.deployment.i2c_qwiic
     
     def load(self, filename=None):
         config = ConfigFile()
