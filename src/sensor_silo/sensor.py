@@ -55,6 +55,7 @@ class Sensor():
         self.stream_type = None
         self.stream = None
         self.calibration = None # calibration.Calibration()
+        self.use_deployed_address = False
         
         # deployed sensor values
         self.name = ''
@@ -66,21 +67,39 @@ class Sensor():
     # @property
     # def type(self):
     #     return self.__class__.__name__
+
+    # @property
+    # def address(self):
+    #     return self._address
+
+    # @address.setter
+    # def address(self, value):
+    #     self._address = value
+
+    #     return
     
     def connect(self, stream, address=None):
         self.stream = stream
         
         if address is None:
+            self.use_deployed_address = True
             address = self.address
 
         if address.lower() == 'nd':
-            # print(' Sensor.connect(): NO DEPLOYED ADDRESS')
-            pass
+            print(' sensor.connect(): NOT DEPLOYED')            
+        elif self.stream.validate_address(address):
+            print(' sensor.connect(): INVALID ADDRESS')
         else:
             self.stream.connect(address)
         
         return
 
+    def reconnect(self):
+        if self.use_deployed_address:
+            self.connect(self.stream)
+
+        return
+    
     @property
     def is_deployed(self):
         return self.address.lower() != 'nd'
@@ -173,10 +192,12 @@ class SensorShell(shell.Shell):
     
     @property
     def prompt(self):
-        item =  self.red(self.id)
         
+        item = '{}.{}'.format(self.sensor.stream.address, self.sensor.id)
         if self.sensor.calibration.is_valid:
-            item = self.green(self.id)
+            item = self.green(item)
+        else:
+            item =  self.red(item)
             
         prompt = '{} ({}): '.format(self.cyan('edit sensor'), item)
             
@@ -216,7 +237,8 @@ class SensorShell(shell.Shell):
         err_str = self.sensor.stream.validate_address(arg)
         if not err_str:
             self.sensor.address = arg.strip().upper() #self.sensor.stream.address
-            
+            self.sensor.reconnect()
+        
         self.do_show()
         
         if err_str:
@@ -261,7 +283,7 @@ class SensorShell(shell.Shell):
     def do_meas(self, arg):
         ''' meas <mV> Evaluates mV in engineering units, sensor value if blank.'''
         if len(arg.strip()) == 0:
-            self.meas(arg)
+            self.meas(None)
         else:
             self.eval(arg)
         
@@ -280,9 +302,14 @@ class SensorShell(shell.Shell):
 
     def meas(self, arg):
         ''' sensor measurement in engineering units'''
+        addr = self.sensor.stream.address
+
+        if not addr:
+            print('NO ADDRESS')
+            return
+        
         self.sensor.update()
 
-        addr = self.sensor.stream.address
         raw = '{} {}'.format(round(self.sensor.raw_value, 3), self.sensor.raw_units)
         if self.sensor.calibration.is_valid:
             scaled = '{} {}'.format(round(self.sensor.scaled_value, 3), self.sensor.scaled_units)
@@ -394,9 +421,11 @@ class SensorsShell(shell.Shell):
         if len(self.sensors) == 0:
             sensor_id = 'empty'
         else:
-            sensor_id = self.red(self.sensor.id)
+            sensor_id = '{}'.format(self.sensor.id)
             if self.sensor.calibration.is_valid:
-                sensor_id = self.green(self.sensor.id)
+                sensor_id = self.green(sensor_id)
+            else:
+                sensor_id= self.red(sensor_id)
 
         return '{}[{}]: '.format(self.cyan('db'), sensor_id)
 

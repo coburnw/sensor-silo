@@ -85,9 +85,10 @@ class Deploy():
         return
     
     def connect(self, streams):
+        # xx build an iterator
         for sensor in self.sensors.values():
-            if sensor.address.lower() == 'nd':
-                # print(' Sensor.connect(): NO DEPLOYED ADDRESS')
+            if not sensor.is_deployed:
+                # print(' deploy.connect(): NO DEPLOYED ADDRESS')
                 pass
             else:
                 stream = streams[sensor.stream_type]() # create a new hardware stream instance

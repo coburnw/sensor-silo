@@ -76,21 +76,6 @@ class ProcedureShell(shell.Shell):
         
         return False
     
-    def do_address(self, arg=None):
-        ''' address <addr> change address of phorp channel used by procedure'''
-
-        address = arg[0]
-        channel = arg[1]
-        
-        if address in 'abcdefg' and channel in '1234':
-            self.stream_address = address + channel
-        else:
-            print(' invalid address. board_id is a-g, channel_id is 1-4')
-
-        self.do_show(None)
-        
-        return
-    
     def do_interval(self, arg):
         ''' interval <n> Calibration interval in days'''
 
@@ -106,8 +91,30 @@ class ProcedureShell(shell.Shell):
         
         return False
 
-    def prep(self, sensor):
+    def do_address(self, arg=None):
+        ''' address <addr> change address of sensor used by procedure, use 'deployed' for deployed address of sensor.'''
+        
+        address = arg.strip().lower()
 
+        if address == 'deployed':
+            err_str = ''
+        else:
+            stream = self.streams[self.stream_type]() # create a new stream instance
+            err_str = stream.validate_address(address) # to validate the sensor address
+        
+        if not err_str:
+            self.stream_address = address
+            
+        self.do_show(None)
+        
+        if err_str:
+            print(err_str)
+        
+        return
+    
+    def prep(self, sensor):
+        ''' preps a sensor for use and connects it to a stream.'''
+        
         if sensor.kind is None:
             # initialize a new sensor
             sensor.kind = self.kind
@@ -125,11 +132,17 @@ class ProcedureShell(shell.Shell):
 
         sensor.stream_type = self.stream_type        
         stream = self.streams[sensor.stream_type]() # create a new stream instance
-        sensor.connect(stream, self.stream_address) # and override deployed address
+
+        if self.stream_address == 'deployed':
+            sensor.connect(stream) # use deployed address
+        else:
+            sensor.connect(stream, self.stream_address) # override deployed address
         
         return
     
     def run(self, sensor):
+        ''' runs a calibration procedure on a preped sensor'''
+        
         if not self.evaluate(sensor):
             print(' sensor calibration canceled.')
         else:
@@ -139,8 +152,6 @@ class ProcedureShell(shell.Shell):
             else:
                 print(' sensor calibration failed.  calibration invalidated.')
                
-            # prompt here to accept...
-        
         # sensor.calibration.show()
 
         return
@@ -149,7 +160,7 @@ class ProcedureShell(shell.Shell):
         ''' specialized evaluation of sensor calibration constants'''
         raise NotImplemented
     
-    def save(self, sensor): # poor name choice for function that calculates the factors/coeffcients
+    def save(self, sensor): # xx poor name choice for function that calculates the factors/coeffcients
         ''' specialized save/use of sensor calibration constants'''
         raise NotImplemented
     
@@ -180,21 +191,21 @@ class ProcedureShell(shell.Shell):
         
     
 class NullProcedure(ProcedureShell):
-    def do_address(self, arg=None):
-        ''' address <addr> change address of phorp channel used by procedure'''
-        address = arg.strip().lower()
+    # def do_address(self, arg=None):
+    #     ''' address <addr> change address of phorp channel used by procedure'''
+    #     address = arg.strip().lower()
         
-        stream = self.streams[self.stream_type]() # create a new stream instance
-        err_str = stream.validate_address(address)
+    #     stream = self.streams[self.stream_type]() # create a new stream instance
+    #     err_str = stream.validate_address(address)
         
-        if not err_str:
-            self.stream_address = address
-        else:
-            print(err_str)
+    #     if not err_str:
+    #         self.stream_address = address
+    #     else:
+    #         print(err_str)
             
-        self.do_show(None)
+    #     self.do_show(None)
         
-        return
+    #     return
     
     def show(self):
         return
