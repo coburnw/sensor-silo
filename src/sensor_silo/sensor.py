@@ -484,8 +484,29 @@ class SensorsShell(shell.Shell):
         return sensor
         
     def do_edit(self, arg):
-        ''' edit selected sensor'''
-        SensorShell(self.sensor, self.procedure).cmdloop()
+        ''' edit <sensor_id> Edits sensor_id if present, otherwise selected sensor'''
+
+        item_id = None
+        if len(arg) > 0:
+            item_id = arg.strip().lower()
+
+        if item_id:
+            items = list(self.sensors.keys())
+            
+            index = None
+            try:
+                index = items.index(item_id)
+            except ValueError:
+                pass
+
+            if index is None:
+                self.do_list(None)
+                print('sensor {} not found'.format(item_id))
+            else:
+                self.sensor_index = index
+                SensorShell(self.sensor, self.procedure).cmdloop()
+        else:
+            SensorShell(self.sensor, self.procedure).cmdloop()
 
         return
     
