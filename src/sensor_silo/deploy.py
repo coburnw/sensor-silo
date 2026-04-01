@@ -30,7 +30,7 @@ class DeployShell(shell.Shell):
 
         self.update_interval = 60 # minutes
         self.over_sample_rate = 10 # samples per interval
-        self.filter_in_percent = 10 # %
+        self.filter_constant = 10 # %
 
         # default raspberry pi zero i2c ports
         self.i2c_qwiic = 1
@@ -123,17 +123,15 @@ class DeployShell(shell.Shell):
         return False
 
     def do_filter(self, arg):
-        ''' Approximate Filter Time Constant, 1 = no filtering, OSR = 1 TC'''
+        ''' Filter Constant, a value greater than 1 where 1 = no filtering.  See spreadsheet for approximation.'''
 
         try:
-            self.filter_in_percent = int(arg) # xx not percent
+            self.filter_constant = int(arg)
         except ValueError:
-            self.filter_in_percent = 1
+            self.filter_constant = 1
             
-        if self.filter_in_percent < 0:
-            self.filter_in_percent = 0
-        if self.filter_in_percent > 250:
-            self.filter_in_percent = 250
+        if self.filter_constant < 1:
+            self.filter_constant = 1
 
         self.do_show()
         
@@ -164,7 +162,7 @@ class DeployShell(shell.Shell):
         print('')
         print('  Interval: {} minutes'.format(self.update_interval))
         print('  OSR:  {} samples per interval'.format(self.over_sample_rate))
-        print('  Filter TC: {}'.format(self.filter_in_percent))
+        print('  Filter constant: {}'.format(self.filter_constant))
         print('  Stemma i2c port: {}'.format(self.i2c_stemma))
         
         return False
@@ -182,7 +180,7 @@ class DeployShell(shell.Shell):
         
         package += 'update_interval = {}\n'.format(self.update_interval)
         package += 'over_sample_rate = {}\n'.format(self.over_sample_rate)
-        package += 'filter_in_percent = {}\n'.format(self.filter_in_percent)
+        package += 'filter_constant = {}\n'.format(self.filter_constant)
         package += 'i2c_stemma = {}\n'.format(self.i2c_stemma)
         package += 'i2c_qwiic = {}\n'.format(self.i2c_qwiic)
 
@@ -196,7 +194,7 @@ class DeployShell(shell.Shell):
         
         self.update_interval = package.get('update_interval', 60)
         self.over_sample_rate = package.get('over_sample_rate', 10)        
-        self.filter_in_percent = package.get('filter_in_percent', 0)
+        self.filter_constant = package.get('filter_constant', 1)
         self.i2c_stemma = package.get('i2c_stemma', 0)
         self.i2c_qwiic = package.get('i2c_qwiic', 1)
                 

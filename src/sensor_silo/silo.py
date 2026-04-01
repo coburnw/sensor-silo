@@ -61,8 +61,8 @@ class Deploy():
         return self.deployment.over_sample_rate
 
     @property
-    def time_constant(self):
-        tc = self.deployment.filter_in_percent / 100
+    def filter_constant(self): # xx filter_constant()
+        tc = self.deployment.filter_constant
         if tc < 1:
             tc = 1
             
