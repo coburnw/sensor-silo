@@ -36,8 +36,11 @@ class RunningStats:
             self.old_s = 0
         else:
             self.new_m = self.old_m + (x - self.old_m) / self.n
+            
             self.new_s = self.old_s + (x - self.old_m) * (x - self.new_m)
-
+            if self.max_n > 0:
+                self.new_s -= self.old_s / self.n
+                
             self.old_m = self.new_m
             self.old_s = self.new_s
 
@@ -52,8 +55,14 @@ class RunningStats:
     def standard_deviation(self):
         return math.sqrt(self.variance())
 
-    def z_score(self, x):
-        return (x - self.mean()) / self.standard_deviation() if self.n > 1 else 5
+    def z_score(self, x, standard_error=None):
+        # returns the t-statistic if using standard_error
+        # else z-score if using standard_deviation
+        
+        if standard_error is None:
+            standard_error = self.standard_deviation()
+            
+        return 1000 if standard_error == 0 else (x - self.mean()) / standard_error
     
     @property
     def synopsis(self):
