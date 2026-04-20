@@ -34,7 +34,7 @@ class DeployShell(shell.Shell):
 
         # default raspberry pi zero i2c ports
         self.i2c_qwiic = 1
-        self.i2c_stemma = 0
+        self.i2c_stemma = 1
         
         # self.silo_sensors = sensors
         # self.sensors = [] # deployed sensors
@@ -195,7 +195,7 @@ class DeployShell(shell.Shell):
         self.update_interval = package.get('update_interval', 60)
         self.over_sample_rate = package.get('over_sample_rate', 10)        
         self.filter_constant = package.get('filter_constant', 1)
-        self.i2c_stemma = package.get('i2c_stemma', 0)
+        self.i2c_stemma = package.get('i2c_stemma', 1)
         self.i2c_qwiic = package.get('i2c_qwiic', 1)
                 
         return
