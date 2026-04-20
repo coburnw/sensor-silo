@@ -33,8 +33,10 @@ class DeployShell(shell.Shell):
         self.filter_constant = 10 # %
 
         # default raspberry pi zero i2c ports
-        self.i2c_qwiic = 1
-        self.i2c_stemma = 1
+        self.default_i2c_bus = 1
+        
+        self.i2c_qwiic = self.default_i2c_bus
+        self.i2c_stemma = self.default_i2c_bus
         
         # self.silo_sensors = sensors
         # self.sensors = [] # deployed sensors
@@ -143,12 +145,12 @@ class DeployShell(shell.Shell):
         try:
             self.i2c_stemma = int(arg)
         except ValueError:
-            self.i2c_stemma = 0
+            self.i2c_stemma = self.default_i2c_bus
         
         if self.i2c_stemma > 2:
-            self.i2c_stemma = 0
+            self.i2c_stemma = self.default_i2c_bus
         elif self.i2c_stemma < 0:
-            self.i2c_stemma = 0
+            self.i2c_stemma = self.default_i2c_bus
             
         self.do_show()
         
@@ -195,8 +197,8 @@ class DeployShell(shell.Shell):
         self.update_interval = package.get('update_interval', 60)
         self.over_sample_rate = package.get('over_sample_rate', 10)        
         self.filter_constant = package.get('filter_constant', 1)
-        self.i2c_stemma = package.get('i2c_stemma', 1)
-        self.i2c_qwiic = package.get('i2c_qwiic', 1)
+        self.i2c_stemma = package.get('i2c_stemma', self.default_i2c_bus)
+        self.i2c_qwiic = package.get('i2c_qwiic', self.default_i2c_bus)
                 
         return
 
