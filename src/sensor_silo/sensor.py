@@ -145,10 +145,10 @@ class Sensor():
         package += 'stream_type = "{}"\n'.format(self.stream_type)
         package += 'address = "{}"\n'.format(self.address)
         
-        if self.calibration.is_valid:
-            my_prefix = '{}.{}'.format(prefix, 'calibration')
-            package += '\n'
-            package += self.calibration.pack(my_prefix)
+        #if self.calibration.is_valid:
+        my_prefix = '{}.{}'.format(prefix, 'calibration')
+        package += '\n'
+        package += self.calibration.pack(my_prefix)
 
         return package
 
