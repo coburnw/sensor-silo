@@ -167,12 +167,9 @@ class PolynomialProcedure(procedure.ProcedureShell):
 class PolynomialEquation(equation.Equation):
     def __init__(self, package=None):
         super().__init__()
-        
-        self.degree = 1
-        self.coefficients = dict()
-        self.coefficients[0] = 0.0
-        self.coefficients[1] = 1.0
 
+        self.reset()  # initialize coefficients
+        
         if package:
             self.unpack(package)
 
@@ -195,6 +192,14 @@ class PolynomialEquation(equation.Equation):
             self.coefficients[0] = 0.0
 
         return is_valid
+
+    def reset(self):
+        self.degree = 1
+        self.coefficients = dict()
+        self.coefficients[0] = 0.0
+        self.coefficients[1] = 1.0
+
+        return
     
     def evaluate_x(self, x_value):
         y = self.coefficients[1] * x_value + self.coefficients[0]

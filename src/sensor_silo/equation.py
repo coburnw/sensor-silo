@@ -37,6 +37,11 @@ class Equation():
         ''' convert a scaled x_value to a raw y_value, typically over-ridden'''
         raise NotImplemented
     
+    def reset(self):
+        ''' resets any coefficients to default initialized state'''
+        # raise NotImplemented
+        return
+    
     def dump(self):
         print(self.pack('me'))
         return

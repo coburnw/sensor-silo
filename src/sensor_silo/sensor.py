@@ -269,14 +269,17 @@ class SensorShell(shell.Shell):
         return False
     
     def do_dump(self, arg):
-        ''' dump sensor's coefficients and stats'''
+        ''' dump sensor's coefficients and stats.'''
         self.dump()
         
         return False
 
     def do_cal(self, arg):
-        ''' acquire sensor calibration data'''
-        self.procedure.run(self.sensor)
+        ''' acquire sensor calibration data. 'cal reset' to clear calibration.'''
+        if 'reset' in arg.lower():
+            self.sensor.calibration.reset()
+        else:
+            self.procedure.run(self.sensor)
             
         return
 
@@ -290,7 +293,7 @@ class SensorShell(shell.Shell):
         return False
 
     def do_qual(self, arg):
-        ''' evaluate sensor quality '''
+        ''' evaluate sensor quality.'''
         self.procedure.quality(self.sensor)
         
         return False
@@ -301,7 +304,7 @@ class SensorShell(shell.Shell):
         return
 
     def meas(self, arg):
-        ''' sensor measurement in engineering units'''
+        ''' sensor measurement in engineering units.'''
         addr = self.sensor.stream.address
 
         if not addr:

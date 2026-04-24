@@ -54,6 +54,11 @@ class Calibration():
         self.dump()
         return
     
+    def reset(self):
+        self.timestamp = datetime.date(1970, 1, 1)
+        self.equation.reset()
+        return
+    
     def dump(self):
         print(self.pack('xyz'))
         return
